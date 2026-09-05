@@ -1,7 +1,7 @@
 # PeoplePay360 — Overall Implementation Plan & Status
 
 **Last audited:** 2026-09-05 (code inspected, `tsc --noEmit` run, git history read).
-**Companion docs:** `docs/phase-1-plan.md` (detailed schema, rules and API for Phases 1–2), `pp360.txt` (problem statement), `HRMS OXP - 24 hours.excalidraw` (mockup), `ts-backend/README.md` (run instructions).
+**Companion docs:** `docs/build-plan.md` (**the executable step-by-step queue derived from this file — start there**), `docs/phase-1-plan.md` (detailed schema, rules and API for Phases 1–2), `pp360.txt` (problem statement), `HRMS OXP - 24 hours.excalidraw` (mockup), `ts-backend/README.md` (run instructions).
 
 **Legend**
 
@@ -392,6 +392,10 @@ Translation rules for MySQL/Prisma are the same as `docs/phase-1-plan.md` §4.1.
 ---
 
 ## 10. Recommended sequence from here
+
+Each row below is broken into individually implementable steps with files, actions and a verification gate
+in **`docs/build-plan.md`** (step ids `P0-*`, `FE-*`, `P1-*` … `P6-*`). Work that file top to bottom; keep
+the status tables here in sync as steps land.
 
 | Order | Work | Why now |
 |---|---|---|
