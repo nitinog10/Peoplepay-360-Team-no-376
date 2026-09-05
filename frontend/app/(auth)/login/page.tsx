@@ -74,18 +74,18 @@ export default function LoginPage() {
   const { errors } = form.formState;
 
   return (
-    <Card className="w-full max-w-sm">
-      <CardHeader>
-        <CardTitle className="font-display text-xl">Sign in</CardTitle>
+    <Card className="w-full max-w-md border-white/35 py-6 shadow-[0_20px_60px_rgba(31,18,28,0.24)] sm:py-7">
+      <CardHeader className="px-6 sm:px-8">
+        <CardTitle className="font-display text-2xl">Sign in</CardTitle>
         <CardDescription>
           Use your username or your work email address.
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-6 sm:px-8">
         <form
           noValidate
           onSubmit={form.handleSubmit(onSubmit)}
-          className="flex flex-col gap-4"
+          className="flex flex-col gap-5"
         >
           {formError && (
             <p
