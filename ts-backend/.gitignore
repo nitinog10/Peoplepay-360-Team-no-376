@@ -3,3 +3,16 @@
 # dependencies
 /node_modules
 
+# build output
+/dist
+
+# generated prisma client
+/src/generated
+
+# environment
+.env
+.env.*
+!.env.example
+
+# test artifacts
+/coverage

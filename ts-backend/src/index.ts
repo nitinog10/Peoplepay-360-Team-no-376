@@ -1,17 +1,29 @@
-import express, { Request, Response } from 'express';
-import dotenv from 'dotenv';
+import { createApp } from './app';
+import { env } from './config/env';
+import { logger } from './lib/logger';
+import { connectDatabase, disconnectDatabase } from './lib/prisma';
 
-dotenv.config();
+async function main() {
+  await connectDatabase();
 
-const app = express();
-const PORT = process.env.PORT || 8000;
+  const app = createApp();
+  const server = app.listen(env.PORT, () => {
+    logger.info(`PeoplePay360 API listening on http://localhost:${env.PORT}/api/v1`);
+  });
 
-app.use(express.json());
+  const shutdown = (signal: string) => {
+    logger.info({ signal }, 'Shutting down');
+    server.close(async () => {
+      await disconnectDatabase();
+      process.exit(0);
+    });
+    setTimeout(() => process.exit(1), 10_000).unref();
+  };
+  process.on('SIGINT', () => shutdown('SIGINT'));
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+}
 
-app.get('/', (req: Request, res: Response) => {
-  res.json({ message: 'TypeScript dfhskjdf backend is running successfully!' });
-});
-
-app.listen(PORT, () => {
-  console.log(`Server is listening on http://localhost:${PORT}`);
+main().catch((err) => {
+  logger.fatal({ err }, 'Failed to start server');
+  process.exit(1);
 });

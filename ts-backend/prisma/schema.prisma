@@ -1,0 +1,333 @@
+// PeoplePay360 — Phase 1 schema (team SQL schema translated to MySQL/Prisma).
+// Table and column names are kept snake_case in MySQL via @map/@@map.
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+// ---------- Enums (PostgreSQL CHECK constraints → MySQL ENUM) ----------
+
+enum RoleName {
+  EMPLOYEE
+  HR_MANAGER
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
+  TERMINATED
+}
+
+enum ContractType {
+  PERMANENT
+  FIXED_TERM
+  INTERNSHIP
+  CONTRACTOR
+}
+
+enum ContractStatus {
+  ACTIVE
+  EXPIRED
+  TERMINATED
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  HALF_DAY
+  ON_LEAVE
+  HOLIDAY
+  WEEK_OFF
+}
+
+enum AttendanceEntryType {
+  CLOCK_IN
+  CLOCK_OUT
+  BREAK_START
+  BREAK_END
+}
+
+enum AttendanceSource {
+  MANUAL
+  BIOMETRIC
+  MOBILE_APP
+  WEB
+}
+
+enum TimeOffStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum ApprovalDecision {
+  APPROVED
+  REJECTED
+}
+
+// ---------- Reference / Lookup Tables ----------
+
+model Role {
+  roleId   Int      @id @default(autoincrement()) @map("role_id")
+  roleName RoleName @unique @map("role_name")
+
+  users User[]
+
+  @@map("roles")
+}
+
+model Department {
+  departmentId   Int     @id @default(autoincrement()) @map("department_id")
+  departmentName String  @unique @map("department_name") @db.VarChar(100)
+  description    String? @db.Text
+
+  employees Employee[]
+
+  @@map("departments")
+}
+
+model LeaveType {
+  leaveTypeId       Int     @id @default(autoincrement()) @map("leave_type_id")
+  typeName          String  @unique @map("type_name") @db.VarChar(50)
+  defaultAnnualDays Decimal @default(0) @map("default_annual_days") @db.Decimal(5, 2)
+  description       String? @db.Text
+
+  leaveBalances   LeaveBalance[]
+  timeOffRequests TimeOffRequest[]
+
+  @@map("leave_types")
+}
+
+model WorkSchedule {
+  scheduleId   Int      @id @default(autoincrement()) @map("schedule_id")
+  scheduleName String   @unique @map("schedule_name") @db.VarChar(100)
+  /// ISO weekdays as a JSON array, e.g. [1,2,3,4,5]. (MySQL has no array type.)
+  daysOfWeek   Json     @map("days_of_week")
+  startTime    DateTime @map("start_time") @db.Time(0)
+  endTime      DateTime @map("end_time") @db.Time(0)
+  /// Derived: |daysOfWeek| × (endTime − startTime). Recomputed by the service on save.
+  weeklyHours  Decimal? @map("weekly_hours") @db.Decimal(4, 2)
+  description  String?  @db.Text
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  assignments EmployeeScheduleAssignment[]
+
+  @@map("work_schedules")
+}
+
+// ---------- Core People Tables ----------
+
+model Employee {
+  employeeId      Int            @id @default(autoincrement()) @map("employee_id")
+  firstName       String         @map("first_name") @db.VarChar(50)
+  lastName        String         @map("last_name") @db.VarChar(50)
+  email           String         @unique @db.VarChar(150)
+  phone           String?        @db.VarChar(20)
+  dateOfBirth     DateTime?      @map("date_of_birth") @db.Date
+  address         String?        @db.Text
+  hireDate        DateTime       @map("hire_date") @db.Date
+  terminationDate DateTime?      @map("termination_date") @db.Date
+  departmentId    Int?           @map("department_id")
+  jobTitle        String?        @map("job_title") @db.VarChar(100)
+  managerId       Int?           @map("manager_id")
+  status          EmployeeStatus @default(ACTIVE)
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @default(now()) @updatedAt @map("updated_at")
+
+  department Department? @relation(fields: [departmentId], references: [departmentId])
+  manager    Employee?   @relation("EmployeeManager", fields: [managerId], references: [employeeId])
+  reports    Employee[]  @relation("EmployeeManager")
+
+  user                User?
+  contracts           Contract[]                   @relation("EmployeeContracts")
+  createdContracts    Contract[]                   @relation("ContractCreatedBy")
+  scheduleAssignments EmployeeScheduleAssignment[]
+  leaveBalances       LeaveBalance[]
+  attendanceRecords   AttendanceRecord[]
+  timeOffRequests     TimeOffRequest[]
+  reviewedApprovals   TimeOffApproval[]            @relation("ApprovalReviewer")
+
+  @@index([departmentId], map: "idx_employees_department")
+  @@index([managerId], map: "idx_employees_manager")
+  @@map("employees")
+}
+
+/// Authentication / authorization, kept separate from personal data.
+model User {
+  userId       Int       @id @default(autoincrement()) @map("user_id")
+  employeeId   Int       @unique @map("employee_id")
+  username     String    @unique @db.VarChar(50)
+  passwordHash String    @map("password_hash") @db.VarChar(255)
+  roleId       Int       @map("role_id")
+  isActive     Boolean   @default(true) @map("is_active")
+  lastLoginAt  DateTime? @map("last_login_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  employee      Employee       @relation(fields: [employeeId], references: [employeeId], onDelete: Cascade)
+  role          Role           @relation(fields: [roleId], references: [roleId])
+  refreshTokens RefreshToken[]
+
+  @@map("users")
+}
+
+/// Added for session handling (not in the original team schema).
+model RefreshToken {
+  tokenId   Int       @id @default(autoincrement()) @map("token_id")
+  userId    Int       @map("user_id")
+  tokenHash String    @unique @map("token_hash") @db.VarChar(64)
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@index([userId], map: "idx_refresh_tokens_user")
+  @@map("refresh_tokens")
+}
+
+// ---------- Contracts (HR Manager: CRUD) ----------
+
+model Contract {
+  contractId   Int            @id @default(autoincrement()) @map("contract_id")
+  employeeId   Int            @map("employee_id")
+  contractType ContractType   @map("contract_type")
+  startDate    DateTime       @map("start_date") @db.Date
+  endDate      DateTime?      @map("end_date") @db.Date
+  baseSalary   Decimal?       @map("base_salary") @db.Decimal(12, 2)
+  /// Default comes from DEFAULT_CURRENCY in the environment (set by the service).
+  currency     String?        @db.VarChar(3)
+  status       ContractStatus @default(ACTIVE)
+  documentUrl  String?        @map("document_url") @db.Text
+  createdBy    Int?           @map("created_by")
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @default(now()) @updatedAt @map("updated_at")
+
+  employee Employee  @relation("EmployeeContracts", fields: [employeeId], references: [employeeId], onDelete: Cascade)
+  creator  Employee? @relation("ContractCreatedBy", fields: [createdBy], references: [employeeId])
+
+  @@index([employeeId], map: "idx_contracts_employee")
+  @@index([employeeId, status], map: "idx_contracts_employee_status")
+  @@map("contracts")
+}
+
+// ---------- Working Schedules (HR Manager: CRUD | Employee: read own) ----------
+
+model EmployeeScheduleAssignment {
+  assignmentId  Int       @id @default(autoincrement()) @map("assignment_id")
+  employeeId    Int       @map("employee_id")
+  scheduleId    Int       @map("schedule_id")
+  effectiveFrom DateTime  @map("effective_from") @db.Date
+  effectiveTo   DateTime? @map("effective_to") @db.Date
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  employee Employee     @relation(fields: [employeeId], references: [employeeId], onDelete: Cascade)
+  schedule WorkSchedule @relation(fields: [scheduleId], references: [scheduleId])
+
+  @@unique([employeeId, effectiveFrom], map: "uq_schedule_assignment_employee_from")
+  @@index([employeeId], map: "idx_schedule_assignments_employee")
+  @@map("employee_schedule_assignments")
+}
+
+// ---------- Leave Balances (Employee: read own | HR Manager: CRUD) ----------
+
+model LeaveBalance {
+  leaveBalanceId     Int      @id @default(autoincrement()) @map("leave_balance_id")
+  employeeId         Int      @map("employee_id")
+  leaveTypeId        Int      @map("leave_type_id")
+  year               Int      @db.SmallInt
+  allocatedDays      Decimal  @default(0) @map("allocated_days") @db.Decimal(5, 2)
+  carriedForwardDays Decimal  @default(0) @map("carried_forward_days") @db.Decimal(5, 2)
+  usedDays           Decimal  @default(0) @map("used_days") @db.Decimal(5, 2)
+  updatedAt          DateTime @default(now()) @updatedAt @map("updated_at")
+
+  employee  Employee  @relation(fields: [employeeId], references: [employeeId], onDelete: Cascade)
+  leaveType LeaveType @relation(fields: [leaveTypeId], references: [leaveTypeId])
+
+  // remaining_days = allocated_days + carried_forward_days - used_days (derived in the API, never stored)
+  @@unique([employeeId, leaveTypeId, year], map: "uq_leave_balance_employee_type_year")
+  @@index([employeeId, year], map: "idx_leave_balances_employee_year")
+  @@map("leave_balances")
+}
+
+// ---------- Attendance (Employee: punch + read own | HR Manager: CRUD) ----------
+
+model AttendanceRecord {
+  attendanceRecordId Int              @id @default(autoincrement()) @map("attendance_record_id")
+  employeeId         Int              @map("employee_id")
+  attendanceDate     DateTime         @map("attendance_date") @db.Date
+  status             AttendanceStatus @default(PRESENT)
+  notes              String?          @db.Text
+  createdAt          DateTime         @default(now()) @map("created_at")
+  updatedAt          DateTime         @default(now()) @updatedAt @map("updated_at")
+
+  employee Employee          @relation(fields: [employeeId], references: [employeeId], onDelete: Cascade)
+  entries  AttendanceEntry[]
+
+  @@unique([employeeId, attendanceDate], map: "uq_attendance_employee_date")
+  @@index([employeeId, attendanceDate], map: "idx_attendance_records_emp_date")
+  @@map("attendance_records")
+}
+
+model AttendanceEntry {
+  attendanceEntryId  Int                 @id @default(autoincrement()) @map("attendance_entry_id")
+  attendanceRecordId Int                 @map("attendance_record_id")
+  entryType          AttendanceEntryType @map("entry_type")
+  entryTime          DateTime            @map("entry_time")
+  source             AttendanceSource    @default(MANUAL)
+  createdAt          DateTime            @default(now()) @map("created_at")
+
+  record AttendanceRecord @relation(fields: [attendanceRecordId], references: [attendanceRecordId], onDelete: Cascade)
+
+  // total hours worked per day: derived from paired CLOCK_IN / CLOCK_OUT entries minus breaks
+  @@index([attendanceRecordId], map: "idx_attendance_entries_record")
+  @@map("attendance_entries")
+}
+
+// ---------- Time Off Requests (Employee: CRUD own) ----------
+
+model TimeOffRequest {
+  timeOffRequestId Int           @id @default(autoincrement()) @map("time_off_request_id")
+  employeeId       Int           @map("employee_id")
+  leaveTypeId      Int           @map("leave_type_id")
+  startDate        DateTime      @map("start_date") @db.Date
+  endDate          DateTime      @map("end_date") @db.Date
+  /// Computed by the service from the employee's working schedule.
+  totalDays        Decimal       @map("total_days") @db.Decimal(5, 2)
+  reason           String?       @db.Text
+  status           TimeOffStatus @default(PENDING)
+  requestedAt      DateTime      @default(now()) @map("requested_at")
+  updatedAt        DateTime      @default(now()) @updatedAt @map("updated_at")
+
+  employee  Employee         @relation(fields: [employeeId], references: [employeeId], onDelete: Cascade)
+  leaveType LeaveType        @relation(fields: [leaveTypeId], references: [leaveTypeId])
+  approval  TimeOffApproval?
+
+  // CHECK (end_date >= start_date) enforced in validation + service
+  @@index([employeeId], map: "idx_time_off_requests_employee")
+  @@index([status], map: "idx_time_off_requests_status")
+  @@map("time_off_requests")
+}
+
+// ---------- Time Off Approvals (HR Manager only) ----------
+
+model TimeOffApproval {
+  approvalId       Int              @id @default(autoincrement()) @map("approval_id")
+  timeOffRequestId Int              @unique @map("time_off_request_id")
+  /// Must hold HR_MANAGER role (enforced by the service).
+  reviewedBy       Int              @map("reviewed_by")
+  decision         ApprovalDecision
+  comments         String?          @db.Text
+  decidedAt        DateTime         @default(now()) @map("decided_at")
+
+  request  TimeOffRequest @relation(fields: [timeOffRequestId], references: [timeOffRequestId], onDelete: Cascade)
+  reviewer Employee       @relation("ApprovalReviewer", fields: [reviewedBy], references: [employeeId])
+
+  @@map("time_off_approvals")
+}
