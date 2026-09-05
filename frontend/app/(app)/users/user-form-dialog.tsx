@@ -16,7 +16,7 @@ import { sessionKey, useSession } from "@/lib/auth/session";
 import { api, employeeKeys, userKeys, type CreateUserBody, type ManagedUser, type UpdateUserBody } from "@/lib/api";
 
 const username = z.string().trim().min(3).max(50).regex(/^[a-zA-Z0-9._@-]+$/, "Username may contain letters, numbers, dots, underscores, @ and dashes");
-const assignableRole = z.enum(["EMPLOYEE", "HR_MANAGER", "HR_PAYROLL_USER"]);
+const assignableRole = z.enum(["EMPLOYEE", "HR_MANAGER", "HR_PAYROLL_USER", "HR_PAYROLL_MANAGER"]);
 const createSchema = z.object({
   employeeId: z.string().min(1, "Select an employee"),
   username,
@@ -38,6 +38,7 @@ type AssignableRole = Values["role"];
 function roleLabel(role: AssignableRole): string {
   if (role === "HR_MANAGER") return "HR Manager";
   if (role === "HR_PAYROLL_USER") return "HR Payroll User";
+  if (role === "HR_PAYROLL_MANAGER") return "HR Payroll Manager";
   return "Employee";
 }
 
@@ -46,7 +47,7 @@ function defaults(user?: ManagedUser): Values {
     employeeId: user ? String(user.employeeId) : "",
     username: user?.username ?? "",
     password: "",
-    role: user && ["EMPLOYEE", "HR_MANAGER", "HR_PAYROLL_USER"].includes(user.role) ? user.role as AssignableRole : "EMPLOYEE",
+    role: user && ["EMPLOYEE", "HR_MANAGER", "HR_PAYROLL_USER", "HR_PAYROLL_MANAGER"].includes(user.role) ? user.role as AssignableRole : "EMPLOYEE",
     isActive: user?.isActive ?? true,
   };
 }

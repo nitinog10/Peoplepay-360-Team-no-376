@@ -19,23 +19,30 @@ import {
 
 const hr: Actor = { userId: 1, employeeId: 1, role: 'HR_MANAGER', username: 'hr.manager' };
 const payroll: Actor = { userId: 3, employeeId: 3, role: 'HR_PAYROLL_USER', username: 'payroll.user' };
+const payrollManager: Actor = { userId: 4, employeeId: 4, role: 'HR_PAYROLL_MANAGER', username: 'payroll.manager' };
 const employee: Actor = { userId: 2, employeeId: 7, role: 'EMPLOYEE', username: 'aarav.mehta@oxp.com' };
 
-const PAYROLL_PERMISSIONS = ['payroll:read', 'payruns:write', 'payslips:write', 'salary-config:read'] as const;
+const PAYROLL_USER_PERMISSIONS = ['payroll:read', 'payruns:write', 'payslips:write', 'salary-config:read'] as const;
+const PAYROLL_MANAGER_PERMISSIONS = ['salary-config:write', 'payruns:delete', 'payslips:delete'] as const;
 
 describe('role catalogue', () => {
   it('keeps HR_MANAGER on the explicit HR permission set without payroll access', () => {
-    expect(permissionsFor('HR_MANAGER')).toHaveLength(PERMISSIONS.length - PAYROLL_PERMISSIONS.length);
-    for (const permission of PAYROLL_PERMISSIONS) expect(hasPermission('HR_MANAGER', permission)).toBe(false);
+    expect(permissionsFor('HR_MANAGER')).toHaveLength(PERMISSIONS.length - PAYROLL_USER_PERMISSIONS.length - PAYROLL_MANAGER_PERMISSIONS.length);
+    for (const permission of [...PAYROLL_USER_PERMISSIONS, ...PAYROLL_MANAGER_PERMISSIONS]) expect(hasPermission('HR_MANAGER', permission)).toBe(false);
   });
 
-  it('makes HR_PAYROLL_USER the HR_MANAGER superset with every released permission', () => {
-    expect(permissionsFor('HR_PAYROLL_USER')).toHaveLength(PERMISSIONS.length);
-    for (const permission of PERMISSIONS) expect(hasPermission('HR_PAYROLL_USER', permission)).toBe(true);
+  it('makes HR_PAYROLL_USER the HR_MANAGER superset without manager-only writes', () => {
+    expect(permissionsFor('HR_PAYROLL_USER')).toHaveLength(PERMISSIONS.length - PAYROLL_MANAGER_PERMISSIONS.length);
+    for (const permission of PAYROLL_USER_PERMISSIONS) expect(hasPermission('HR_PAYROLL_USER', permission)).toBe(true);
+    for (const permission of PAYROLL_MANAGER_PERMISSIONS) expect(hasPermission('HR_PAYROLL_USER', permission)).toBe(false);
   });
 
-  it('keeps unreleased roles permission-empty', () => {
-    expect(permissionsFor('HR_PAYROLL_MANAGER')).toEqual([]);
+  it('makes HR_PAYROLL_MANAGER the payroll-user superset with every released permission', () => {
+    expect(permissionsFor('HR_PAYROLL_MANAGER')).toHaveLength(PERMISSIONS.length);
+    for (const permission of PERMISSIONS) expect(hasPermission('HR_PAYROLL_MANAGER', permission)).toBe(true);
+  });
+
+  it('keeps ADMIN permission-empty until Phase 5', () => {
     expect(permissionsFor('ADMIN')).toEqual([]);
   });
 
@@ -78,9 +85,10 @@ describe('role catalogue', () => {
 });
 
 describe('canSeeAllEmployees', () => {
-  it('is true for HR_MANAGER and HR_PAYROLL_USER, and false for EMPLOYEE', () => {
+  it('is true for every released HR-capable role, and false for EMPLOYEE', () => {
     expect(canSeeAllEmployees(hr)).toBe(true);
     expect(canSeeAllEmployees(payroll)).toBe(true);
+    expect(canSeeAllEmployees(payrollManager)).toBe(true);
     expect(canSeeAllEmployees(employee)).toBe(false);
   });
 });

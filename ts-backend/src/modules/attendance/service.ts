@@ -37,7 +37,7 @@ type RecordRow = Prisma.AttendanceRecordGetPayload<{ include: typeof include }>;
  * Resolves schedules for many (employee, date) pairs with one query per employee,
  * so list endpoints do not pay N+1 for derived fields.
  */
-class ScheduleCache {
+export class ScheduleCache {
   private assignments = new Map<number, Promise<{ effectiveFrom: Date; effectiveTo: Date | null; schedule: WorkSchedule }[]>>();
 
   async for(employeeId: number, dateOnly: Date): Promise<WorkSchedule | null> {

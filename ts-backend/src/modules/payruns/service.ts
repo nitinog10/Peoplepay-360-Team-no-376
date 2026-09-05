@@ -443,7 +443,7 @@ export async function markPaid(actor: Actor, payrunId: number) {
 
 export async function cancel(actor: Actor, payrunId: number, input: CancelPayrunInput) {
   const result = await prisma.payrun.updateMany({
-    where: { payrunId, status: { in: ['DRAFT', 'COMPUTED', 'VALIDATED'] } },
+    where: { payrunId, status: { in: ['COMPUTED', 'VALIDATED'] } },
     data: {
       status: 'CANCELLED',
       cancelledBy: actor.employeeId,
@@ -457,4 +457,15 @@ export async function cancel(actor: Actor, payrunId: number, input: CancelPayrun
     throw new BusinessRuleError(`Payrun cannot be cancelled while ${run.status}`);
   }
   return get(payrunId);
+}
+
+export async function remove(payrunId: number) {
+  const result = await prisma.payrun.deleteMany({ where: { payrunId, status: 'DRAFT' } });
+  if (result.count > 0) return;
+  const run = await prisma.payrun.findUnique({ where: { payrunId }, select: { status: true } });
+  if (!run) throw new NotFoundError('Payrun', payrunId);
+  throw new BusinessRuleError(`Only DRAFT payruns can be deleted (current: ${run.status})`, {
+    status: run.status,
+    suggestedAction: run.status === 'COMPUTED' || run.status === 'VALIDATED' ? 'cancel' : 'none',
+  });
 }

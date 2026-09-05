@@ -105,6 +105,7 @@ export const NAV: NavEntry[] = [
     label: "Payroll",
     icon: BanknoteIcon,
     children: [
+      { label: "Dashboard", href: "/payroll/dashboard", icon: LayoutDashboardIcon, permission: "payroll:read", exact: true },
       { label: "Payruns", href: "/payroll/payruns", icon: BanknoteIcon, permission: "payroll:read" },
       { label: "Payslips", href: "/payroll/payslips", icon: FileTextIcon, permission: "payroll:read" },
       { label: "Salary Structures", href: "/payroll/structures", icon: WalletIcon, permission: "salary-config:read" },

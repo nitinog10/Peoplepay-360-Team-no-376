@@ -1,8 +1,7 @@
 # PeoplePay360 API (ts-backend)
 
 Express 5 + TypeScript REST API backed by MySQL 8 through Prisma 6.19.3 (pinned — do not upgrade mid-hackathon).
-Phase 1 covers the **EMPLOYEE** and **HR_MANAGER** roles: employees, departments,
-work schedules, contracts, attendance, leave types, leave balances and time off.
+Phase 1–4 cover **EMPLOYEE**, **HR_MANAGER**, **HR_PAYROLL_USER**, and **HR_PAYROLL_MANAGER**: HR operations, attendance, time off, payroll processing, salary configuration, and payroll reporting.
 
 ## Setup
 
@@ -30,7 +29,9 @@ Schema changes: edit `prisma/schema.prisma`, then `npm run prisma:migrate -- --n
 | Username | Password (env) | Role |
 |---|---|---|
 | `hr.manager` (`SEED_HR_USERNAME`) | `SEED_HR_PASSWORD` | HR_MANAGER |
-| any employee's work email, e.g. `aarav.mehta@oxp.com` | `SEED_EMPLOYEE_PASSWORD` | EMPLOYEE |
+| `vikram.singh@oxp.com` | `SEED_PAYROLL_PASSWORD` | HR_PAYROLL_USER |
+| `maya.shah@oxp.com` | `SEED_PAYROLL_MANAGER_PASSWORD` | HR_PAYROLL_MANAGER |
+| any other employee's work email, e.g. `aarav.mehta@oxp.com` | `SEED_EMPLOYEE_PASSWORD` | EMPLOYEE |
 
 ## Configuration (`.env`)
 
@@ -43,6 +44,7 @@ Schema changes: edit `prisma/schema.prisma`, then `npm run prisma:migrate -- --n
 | `DEFAULT_CURRENCY` | Currency stamped on contracts when none is given |
 | `APP_TIMEZONE` | IANA zone used to decide which day a punch belongs to and whether it is late |
 | `LATE_GRACE_MINUTES` | Grace after scheduled start before a clock-in counts as late |
+| `SEED_HR_PASSWORD`, `SEED_EMPLOYEE_PASSWORD`, `SEED_PAYROLL_PASSWORD`, `SEED_PAYROLL_MANAGER_PASSWORD` | Passwords for the seeded role-specific demo accounts |
 
 ## Authentication
 
@@ -67,6 +69,10 @@ own employee record inside the services.
 | Attendance | `GET /attendance/session`, `POST /attendance/clock-in|clock-out|break-start|break-end`, `GET/POST /attendance/records`, `GET/PATCH/DELETE /attendance/records/:id`, `POST /attendance/records/:id/entries`, `PATCH/DELETE /attendance/entries/:id`, `POST /attendance/mark-absences` |
 | Leave balances | `GET /leave-balances/me`, `GET/POST /leave-balances`, `GET/PATCH/DELETE /leave-balances/:id`, `POST /leave-balances/initialize`, `POST /leave-balances/recompute` |
 | Time off | `GET/POST /time-off/requests`, `GET/PATCH /time-off/requests/:id`, `POST /time-off/requests/:id/approve|reject|cancel`, `GET /time-off/requests/:id/approval` |
+| Salary configuration | `GET/POST /salary-structures`, `GET/PATCH/DELETE /salary-structures/:id`, `POST /salary-structures/:id/reorder-rules`; `GET/POST /salary-rules`, `GET/PATCH/DELETE /salary-rules/:id` |
+| Payruns | `GET/POST /payruns`, `GET/DELETE /payruns/:id`, eligibility, warnings, compute, validate, mark-paid, cancel and send-payslips actions |
+| Payslips | `GET /payslips`, `GET/DELETE /payslips/:id`, `POST /payslips/:id/recompute`, `GET /payslips/:id/pdf` |
+| Payroll dashboard | `GET /dashboard/payroll?from&to&departmentId&contractType` (one live aggregate response) |
 
 List endpoints accept `page`, `pageSize`, `sort`, `order`, `q` plus module filters and return
 `{ data, meta: { page, pageSize, total, totalPages } }`. Dates are `YYYY-MM-DD`; instants are ISO-8601.
@@ -84,6 +90,9 @@ and 422 business-rule violations.
 | Day close: ABSENT / ON_LEAVE / WEEK_OFF rows | `modules/attendance/service.ts` |
 | Leave duration = working days per schedule; overlap and balance checks; approval updates `used_days` | `modules/time-off/service.ts` |
 | Balances: remaining/available derived; yearly initialisation from leave-type defaults; drift recompute | `modules/leave-balances/service.ts` |
+| Salary config conflicts, method operands, reference-safe delete/deactivate and atomic reorder | `modules/salary-structures`, `modules/salary-rules` |
+| Payroll lifecycle: DRAFT hard-delete, COMPUTED/VALIDATED cancel, PAID immutability | `modules/payruns`, `modules/payslips` |
+| Uniform live payroll/attendance/time-off dashboard aggregation | `modules/dashboard/service.ts` |
 
 ## Scripts
 
@@ -94,4 +103,4 @@ and 422 business-rule violations.
 | `npm run prisma:generate` / `prisma:migrate` / `prisma:deploy` / `prisma:seed` | `prisma generate` / `migrate dev` / `migrate deploy` / `db seed` |
 | `npm test` / `npm run test:watch` | vitest — unit tests for the pure rules (no database) |
 | `npm run db:ephemeral` | Throwaway MySQL: migrate, verify tables, seed and stay up (`EPHEMERAL_PORT` pins the port) |
-| `npm run smoke` | End-to-end smoke test against a seeded API (`API_URL` defaults to `http://localhost:8000/api/v1`) |
+| `npm run smoke` | End-to-end Phase 1–4 smoke test against a seeded API (`API_URL` defaults to `http://localhost:8000/api/v1`); current verified total: **113/113** |

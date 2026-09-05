@@ -1,8 +1,9 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { ArrowLeftIcon, PrinterIcon } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeftIcon, LoaderCircleIcon, PrinterIcon, Trash2Icon } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -13,7 +14,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { api, ApiError } from "@/lib/api";
+import { useCan } from "@/hooks/use-can";
+import { api, ApiError, dashboardKeys, payrunKeys, payslipKeys } from "@/lib/api";
 import { formatCurrency, formatDate, formatDateTime, formatDays, formatHours } from "@/lib/format";
 
 function Detail({ label, value }: { label: string; value: React.ReactNode }) {
@@ -29,8 +31,25 @@ function errorMessage(error: unknown) {
 }
 
 export function PayslipDetail({ payslipId }: { payslipId: number }) {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const { can } = useCan();
   const query = useQuery(api.payslips.detail(payslipId));
   const [printing, setPrinting] = useState(false);
+  const remove = useMutation({
+    mutationFn: () => api.payslips.remove(payslipId),
+    onSuccess: async () => {
+      queryClient.removeQueries({ queryKey: payslipKeys.detail(payslipId) });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: payslipKeys.all }),
+        queryClient.invalidateQueries({ queryKey: payrunKeys.all }),
+        queryClient.invalidateQueries({ queryKey: dashboardKeys.all }),
+      ]);
+      toast.success("Draft payslip deleted.");
+      router.push("/payroll/payslips");
+    },
+    onError: (error) => toast.error(error instanceof ApiError ? error.message : "Could not delete the payslip."),
+  });
 
   async function printPayslip() {
     const preview = window.open("", "_blank");
@@ -72,6 +91,7 @@ export function PayslipDetail({ payslipId }: { payslipId: number }) {
       <PageHeader title={`${slip.employee.firstName} ${slip.employee.lastName}`} description={`Payslip #${slip.payslipId} · ${formatDate(slip.periodStart)} – ${formatDate(slip.periodEnd)}`}>
         <StatusBadge status={slip.status} />
         <Button disabled={printing || !slip.computedAt} title={!slip.computedAt ? "Compute this payslip before printing" : undefined} onClick={() => void printPayslip()}><PrinterIcon />{printing ? "Preparing…" : "Print payslip"}</Button>
+        {can("payslips:delete") && slip.status === "DRAFT" && <Button variant="destructive" disabled={remove.isPending} onClick={() => { if (window.confirm("Delete this draft payslip? This cannot be undone.")) remove.mutate(); }}>{remove.isPending ? <LoaderCircleIcon className="animate-spin" /> : <Trash2Icon />}Delete draft</Button>}
       </PageHeader>
 
       <Card>

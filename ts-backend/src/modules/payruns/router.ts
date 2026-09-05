@@ -31,6 +31,11 @@ payrunsRouter.get('/:id', authorize('payroll:read'), async (req, res) => {
   res.json(await service.get(parseId(req.params)));
 });
 
+payrunsRouter.delete('/:id', authorize('payruns:delete'), async (req, res) => {
+  await service.remove(parseId(req.params));
+  res.status(204).send();
+});
+
 payrunsRouter.post('/:id/compute', authorize('payruns:write'), async (req, res) => {
   res.json(await service.compute(parseId(req.params)));
 });

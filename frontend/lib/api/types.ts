@@ -96,6 +96,7 @@ export const PERMISSIONS = [
   "leave-balances:read", "leave-balances:write",
   "time-off:read", "time-off:request", "time-off:decide",
   "payroll:read", "payruns:write", "payslips:write", "salary-config:read",
+  "salary-config:write", "payruns:delete", "payslips:delete",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -483,6 +484,48 @@ export interface SalaryStructureListItem extends SalaryStructureFields {
 
 export interface SalaryStructureDetail extends SalaryStructureListItem {
   rules: SalaryRule[];
+}
+
+export interface PayrollDashboardResponse {
+  filters: { from: DateString; to: DateString; departmentId: number | null; contractType: ContractType | null };
+  currency: string;
+  kpis: {
+    totalNetPaid: number;
+    payslipsGenerated: { total: number; paid: number; pending: number };
+    averageSalaryPerEmployee: number;
+    approvedTimeOffDays: number;
+    attendanceHealthPercent: number;
+  };
+  salaryCostByDepartment: Array<{ departmentId: number | null; departmentName: string; amount: number }>;
+  monthlyNetTrend: Array<{ month: string; amount: number }>;
+  alerts: Array<{
+    type: "MISSING_BANK_DETAILS" | "DUPLICATE_PAYSLIP" | "PAYRUN_NOT_VALIDATED" | "CONTRACT_EXPIRING";
+    severity: "WARNING" | "CRITICAL";
+    title: string;
+    message: string;
+    href: string;
+  }>;
+  attendance: {
+    records: number;
+    present: number;
+    late: number;
+    absent: number;
+    overtimeHours: number;
+    missingCheckouts: number;
+    manualEdits: number;
+    healthPercent: number;
+  };
+  timeOff: { approvedDays: number; pendingDays: number; approvedRequests: number; pendingRequests: number };
+  departmentBreakdown: Array<{
+    departmentId: number | null;
+    departmentName: string;
+    employees: number;
+    salaryCost: number;
+    netPaid: number;
+    payslips: number;
+    attendanceHealthPercent: number;
+    approvedTimeOffDays: number;
+  }>;
 }
 
 export interface PayrollEmployee extends EmployeeRef {

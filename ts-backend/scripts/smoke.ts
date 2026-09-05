@@ -12,6 +12,8 @@ const EMP_USER = 'aarav.mehta@oxp.com';
 const EMP_PASS = process.env.SEED_EMPLOYEE_PASSWORD ?? 'Employee123!';
 const PAYROLL_USER = 'vikram.singh@oxp.com';
 const PAYROLL_PASS = process.env.SEED_PAYROLL_PASSWORD ?? 'Payroll123!';
+const PAYROLL_MANAGER_USER = 'maya.shah@oxp.com';
+const PAYROLL_MANAGER_PASS = process.env.SEED_PAYROLL_MANAGER_PASSWORD ?? 'PayrollManager123!';
 
 let failures = 0;
 const results: string[] = [];
@@ -72,6 +74,19 @@ async function main() {
       payrollLogin.json?.user?.permissions?.includes('users:manage'),
   );
   const payroll: string = payrollLogin.json?.accessToken;
+
+  const payrollManagerLogin = await call('POST', '/auth/login', undefined, { username: PAYROLL_MANAGER_USER, password: PAYROLL_MANAGER_PASS });
+  ok(
+    'payroll manager login and permission superset',
+    payrollManagerLogin.status === 200 &&
+      payrollManagerLogin.json?.user?.role === 'HR_PAYROLL_MANAGER' &&
+      payrollManagerLogin.json?.user?.permissions?.includes('salary-config:write') &&
+      payrollManagerLogin.json?.user?.permissions?.includes('payruns:delete') &&
+      payrollManagerLogin.json?.user?.permissions?.includes('users:manage'),
+  );
+  const payrollManager: string = payrollManagerLogin.json?.accessToken;
+  const payrollManagerMe = await call('GET', '/auth/me', payrollManager);
+  ok('payroll manager /auth/me exposes the full released catalogue', payrollManagerMe.status === 200 && payrollManagerMe.json?.permissions?.includes('payslips:delete'));
 
   const bad = await call('POST', '/auth/login', undefined, { username: HR_USER, password: 'nope' });
   ok('bad password rejected', bad.status === 401);
@@ -173,7 +188,7 @@ async function main() {
   }
   const myAtt = await call('GET', `/attendance/records?from=${plusDays(-14)}&to=${today}&pageSize=50`, emp);
   ok('employee attendance records (derived fields)', myAtt.status === 200 && myAtt.json?.data?.length > 0 && 'workedHours' in (myAtt.json?.data?.[0]?.derived ?? {}), `records=${myAtt.json?.data?.length}`);
-  const hrAtt = await call('GET', `/attendance/records?date=${plusDays(-3)}&pageSize=50`, hr);
+  const hrAtt = await call('GET', `/attendance/records?from=${plusDays(-7)}&to=${today}&pageSize=100`, hr);
   const missing = hrAtt.json?.data?.filter((r: any) => r.derived?.missingCheckout).length;
   ok('HR sees seeded missing check-out', hrAtt.status === 200 && missing >= 1, `missingCheckout=${missing}`);
   const absences = await call('POST', '/attendance/mark-absences', hr, { date: plusDays(-1) });
@@ -264,8 +279,8 @@ async function main() {
   const releasedRoles = await call('GET', '/roles', payroll);
   const roleNames = (releasedRoles.json?.data ?? []).map((role: any) => role.roleName);
   ok(
-    'only released roles are assignable',
-    releasedRoles.status === 200 && roleNames.includes('HR_PAYROLL_USER') && !roleNames.includes('HR_PAYROLL_MANAGER') && !roleNames.includes('ADMIN'),
+    'all Phase 4 roles are assignable while ADMIN remains withheld',
+    releasedRoles.status === 200 && roleNames.includes('HR_PAYROLL_USER') && roleNames.includes('HR_PAYROLL_MANAGER') && !roleNames.includes('ADMIN'),
   );
 
   const structures = await call('GET', '/salary-structures?pageSize=20', payroll);
@@ -279,6 +294,88 @@ async function main() {
   );
   const salaryRules = await call('GET', `/salary-rules?structureId=${regular?.salaryStructureId}&pageSize=20`, payroll);
   ok('payroll reads salary rules', salaryRules.status === 200 && salaryRules.json?.meta?.total === 8);
+
+  // ---- Phase 4 payroll configuration boundaries ----
+  const phase4Stamp = Date.now();
+  const payrollUserConfigDenied = await call('POST', '/salary-structures', payroll, { name: `Denied ${phase4Stamp}`, currency: 'INR' });
+  ok('HR_PAYROLL_USER cannot create salary structures', payrollUserConfigDenied.status === 403);
+  const phase4Structure = await call('POST', '/salary-structures', payrollManager, {
+    name: `Smoke Structure ${phase4Stamp}`,
+    description: 'Disposable Phase 4 smoke configuration',
+    currency: regular?.currency ?? 'INR',
+    isActive: true,
+  });
+  const phase4StructureId = phase4Structure.json?.salaryStructureId;
+  ok('HR_PAYROLL_MANAGER creates salary structure', phase4Structure.status === 201 && phase4StructureId > 0);
+
+  const payrollUserRuleDenied = await call('POST', '/salary-rules', payroll, {
+    salaryStructureId: phase4StructureId,
+    name: 'Denied rule',
+    code: `DENIED_${phase4Stamp}`,
+    category: 'BASIC',
+    sequence: 10,
+    method: 'FIXED',
+    fixedAmount: 1,
+  });
+  ok('HR_PAYROLL_USER cannot create salary rules', payrollUserRuleDenied.status === 403);
+  const phase4Basic = await call('POST', '/salary-rules', payrollManager, {
+    salaryStructureId: phase4StructureId,
+    name: 'Smoke Basic',
+    code: `SMOKE_BASIC_${phase4Stamp}`,
+    category: 'BASIC',
+    sequence: 10,
+    method: 'FIXED',
+    fixedAmount: 1000,
+    isActive: true,
+  });
+  const phase4BasicRuleId = phase4Basic.json?.salaryRuleId;
+  ok('payroll manager creates a salary rule', phase4Basic.status === 201 && phase4BasicRuleId > 0);
+  const phase4Allowance = await call('POST', '/salary-rules', payrollManager, {
+    salaryStructureId: phase4StructureId,
+    name: 'Smoke Allowance',
+    code: `SMOKE_ALLOWANCE_${phase4Stamp}`,
+    category: 'ALLOWANCE',
+    sequence: 20,
+    method: 'FIXED',
+    fixedAmount: 200,
+    isActive: true,
+  });
+  const phase4AllowanceRuleId = phase4Allowance.json?.salaryRuleId;
+  ok('payroll manager creates a second ordered rule', phase4Allowance.status === 201 && phase4AllowanceRuleId > 0);
+  const duplicateSequence = await call('POST', '/salary-rules', payrollManager, {
+    salaryStructureId: phase4StructureId,
+    name: 'Duplicate sequence',
+    code: `SMOKE_DUP_SEQUENCE_${phase4Stamp}`,
+    category: 'ALLOWANCE',
+    sequence: 20,
+    method: 'FIXED',
+    fixedAmount: 1,
+  });
+  ok('duplicate rule sequence within a structure → 409', duplicateSequence.status === 409);
+  const duplicateCode = await call('POST', '/salary-rules', payrollManager, {
+    salaryStructureId: phase4StructureId,
+    name: 'Duplicate code',
+    code: `SMOKE_BASIC_${phase4Stamp}`,
+    category: 'ALLOWANCE',
+    sequence: 30,
+    method: 'FIXED',
+    fixedAmount: 1,
+  });
+  ok('duplicate salary rule code → 409', duplicateCode.status === 409);
+  const updatedRule = await call('PATCH', `/salary-rules/${phase4AllowanceRuleId}`, payrollManager, { fixedAmount: 250 });
+  ok('payroll manager edits salary rule', updatedRule.status === 200 && updatedRule.json?.fixedAmount === 250);
+  const payrollUserPatchDenied = await call('PATCH', `/salary-rules/${phase4AllowanceRuleId}`, payroll, { fixedAmount: 300 });
+  ok('HR_PAYROLL_USER cannot edit salary rules', payrollUserPatchDenied.status === 403);
+  const reordered = await call('POST', `/salary-structures/${phase4StructureId}/reorder-rules`, payrollManager, {
+    rules: [
+      { salaryRuleId: phase4AllowanceRuleId, sequence: 10 },
+      { salaryRuleId: phase4BasicRuleId, sequence: 20 },
+    ],
+  });
+  ok('salary rules reorder atomically', reordered.status === 200 && reordered.json?.rules?.[0]?.salaryRuleId === phase4AllowanceRuleId && reordered.json?.rules?.[1]?.salaryRuleId === phase4BasicRuleId);
+  const deletedUnusedRule = await call('DELETE', `/salary-rules/${phase4AllowanceRuleId}`, payrollManager);
+  ok('payroll manager deletes an unreferenced rule', deletedUnusedRule.status === 204);
+
   const seededRuns = await call('GET', '/payruns?pageSize=100', payroll);
   ok(
     'seed includes a computed payrun',
@@ -348,6 +445,8 @@ async function main() {
 
   const validated = await call('POST', `/payruns/${payrunId}/validate`, payroll);
   ok('validate computed payrun with no hard warnings', validated.status === 200 && validated.json?.status === 'VALIDATED', validated.json?.error?.message);
+  const validatedDelete = await call('DELETE', `/payruns/${payrunId}`, payrollManager);
+  ok('VALIDATED payrun delete → 422', validatedDelete.status === 422);
   const sent = await call('POST', `/payruns/${payrunId}/send-payslips`, payroll);
   ok(
     'send payslips uses dev JSON transport and reports recipients',
@@ -361,6 +460,44 @@ async function main() {
   ok('PAID payrun compute → 422', paidCompute.status === 422);
   const paidCancel = await call('POST', `/payruns/${payrunId}/cancel`, payroll, { reason: 'not allowed' });
   ok('PAID payrun cancel → 422', paidCancel.status === 422);
+  const paidDelete = await call('DELETE', `/payruns/${payrunId}`, payrollManager);
+  ok('PAID payrun delete → 422', paidDelete.status === 422);
+
+  const historicRule = structureDetail.json?.rules?.find((rule: any) => rule.code === 'STANDARD_ALLOWANCE');
+  const historicLineBefore = payslipDetail.json?.lines?.find((line: any) => line.ruleCode === historicRule?.code);
+  const historicRuleEdit = await call('PATCH', `/salary-rules/${historicRule?.salaryRuleId}`, payrollManager, {
+    fixedAmount: Number(historicRule?.fixedAmount ?? 0) + 17,
+  });
+  const paidAfterRuleEdit = await call('GET', `/payslips/${firstPayslipId}`, payrollManager);
+  const historicLineAfter = paidAfterRuleEdit.json?.lines?.find((line: any) => line.ruleCode === historicRule?.code);
+  ok(
+    'editing a rule leaves PAID payslip totals and snapshots unchanged',
+    historicRuleEdit.status === 200 &&
+      paidAfterRuleEdit.status === 200 &&
+      paidAfterRuleEdit.json?.totals?.net === payslipDetail.json?.totals?.net &&
+      historicLineAfter?.amount === historicLineBefore?.amount &&
+      historicLineAfter?.fixedAmount === historicLineBefore?.fixedAmount,
+  );
+  const referencedRuleDelete = await call('DELETE', `/salary-rules/${historicRule?.salaryRuleId}`, payrollManager);
+  ok(
+    'referenced rule delete → 422 with deactivation guidance',
+    referencedRuleDelete.status === 422 &&
+      referencedRuleDelete.json?.error?.details?.canDeactivate === true &&
+      referencedRuleDelete.json?.error?.details?.references?.payslipLines > 0,
+  );
+  const historicRuleRestore = await call('PATCH', `/salary-rules/${historicRule?.salaryRuleId}`, payrollManager, { fixedAmount: historicRule?.fixedAmount });
+  ok('historic rule restored after immutability assertion', historicRuleRestore.status === 200);
+
+  const dashboard = await call('GET', `/dashboard/payroll?from=${plusDays(-90)}&to=${payrollTo}`, payrollManager);
+  ok(
+    'payroll dashboard returns every aggregate section in one response',
+    dashboard.status === 200 &&
+      dashboard.json?.kpis?.payslipsGenerated?.total > 0 &&
+      Array.isArray(dashboard.json?.salaryCostByDepartment) &&
+      Array.isArray(dashboard.json?.monthlyNetTrend) &&
+      Array.isArray(dashboard.json?.alerts) &&
+      Array.isArray(dashboard.json?.departmentBreakdown),
+  );
 
   const cancelFromDate = new Date(payrollToDate);
   cancelFromDate.setUTCDate(cancelFromDate.getUTCDate() + 14);
@@ -381,8 +518,54 @@ async function main() {
     periodEnd: cancelTo,
     employeeIds: [cancelEmployee?.employeeId],
   });
+  const cancelComputed = await call('POST', `/payruns/${cancelRun.json?.payrunId}/compute`, payroll);
   const cancelled = await call('POST', `/payruns/${cancelRun.json?.payrunId}/cancel`, payroll, { reason: 'Smoke cancellation' });
-  ok('cancel DRAFT payrun', cancelRun.status === 201 && cancelled.status === 200 && cancelled.json?.status === 'CANCELLED');
+  const cancelledDetail = await call('GET', `/payruns/${cancelRun.json?.payrunId}`, payrollManager);
+  ok(
+    'cancel COMPUTED payrun preserves row and payslips',
+    cancelRun.status === 201 && cancelComputed.status === 200 && cancelled.status === 200 && cancelled.json?.status === 'CANCELLED' && cancelledDetail.json?.payslipCount === 1,
+  );
+  const cancelledDelete = await call('DELETE', `/payruns/${cancelRun.json?.payrunId}`, payrollManager);
+  ok('CANCELLED payrun delete → 422', cancelledDelete.status === 422);
+
+  // DRAFT hard-delete boundaries using the disposable Phase 4 configuration.
+  const deleteFromDate = new Date(cancelToDate);
+  deleteFromDate.setUTCDate(deleteFromDate.getUTCDate() + 14);
+  const deleteToDate = new Date(deleteFromDate);
+  deleteToDate.setUTCDate(deleteToDate.getUTCDate() + 6);
+  const deleteFrom = deleteFromDate.toISOString().slice(0, 10);
+  const deleteTo = deleteToDate.toISOString().slice(0, 10);
+  const deleteEligibility = await call('GET', `/payruns/eligible-employees?structureId=${phase4StructureId}&from=${deleteFrom}&to=${deleteTo}`, payrollManager);
+  const deleteEmployees = (deleteEligibility.json?.data ?? []).filter((employee: any) => employee.selectable).slice(0, 2);
+  const draftToDelete = await call('POST', '/payruns', payrollManager, {
+    name: `Smoke Delete ${phase4Stamp}`,
+    structureId: phase4StructureId,
+    periodStart: deleteFrom,
+    periodEnd: deleteTo,
+    employeeIds: deleteEmployees.map((employee: any) => employee.employeeId),
+  });
+  const draftToDeleteId = draftToDelete.json?.payrunId;
+  const draftSlips = await call('GET', `/payslips?payrunId=${draftToDeleteId}&pageSize=20`, payrollManager);
+  const firstDraftSlipId = draftSlips.json?.data?.[0]?.payslipId;
+  ok('disposable DRAFT payrun has payslip shells', draftToDelete.status === 201 && draftSlips.json?.meta?.total === 2);
+  const payrollUserRuleDeleteDenied = await call('DELETE', `/salary-rules/${phase4BasicRuleId}`, payroll);
+  ok('HR_PAYROLL_USER cannot delete salary rules', payrollUserRuleDeleteDenied.status === 403);
+  const referencedDraftRuleDelete = await call('DELETE', `/salary-rules/${phase4BasicRuleId}`, payrollManager);
+  ok('rule used by a DRAFT payrun requires deactivation', referencedDraftRuleDelete.status === 422 && referencedDraftRuleDelete.json?.error?.details?.canDeactivate === true);
+  const referencedStructureDelete = await call('DELETE', `/salary-structures/${phase4StructureId}`, payrollManager);
+  ok('structure used by a DRAFT payrun requires deactivation', referencedStructureDelete.status === 422 && referencedStructureDelete.json?.error?.details?.references?.payruns === 1);
+  const payrollUserPayslipDeleteDenied = await call('DELETE', `/payslips/${firstDraftSlipId}`, payroll);
+  ok('HR_PAYROLL_USER cannot delete payslips', payrollUserPayslipDeleteDenied.status === 403);
+  const managerPayslipDelete = await call('DELETE', `/payslips/${firstDraftSlipId}`, payrollManager);
+  ok('payroll manager deletes an individual DRAFT payslip', managerPayslipDelete.status === 204);
+  const payrollUserPayrunDeleteDenied = await call('DELETE', `/payruns/${draftToDeleteId}`, payroll);
+  ok('HR_PAYROLL_USER cannot delete payruns', payrollUserPayrunDeleteDenied.status === 403);
+  const managerPayrunDelete = await call('DELETE', `/payruns/${draftToDeleteId}`, payrollManager);
+  const deletedRunRead = await call('GET', `/payruns/${draftToDeleteId}`, payrollManager);
+  const deletedSlipsRead = await call('GET', `/payslips?payrunId=${draftToDeleteId}`, payrollManager);
+  ok('payroll manager deletes DRAFT payrun and remaining payslips cascade', managerPayrunDelete.status === 204 && deletedRunRead.status === 404 && deletedSlipsRead.json?.meta?.total === 0);
+  const deletedStructure = await call('DELETE', `/salary-structures/${phase4StructureId}`, payrollManager);
+  ok('disposable unreferenced structure deletes after draft cleanup', deletedStructure.status === 204);
 
   // ---- users ----
   const user = await call('POST', '/users', hr, { employeeId: newId, username: `smoke${Date.now()}`, password: 'Password123!', role: 'EMPLOYEE' });

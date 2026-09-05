@@ -16,6 +16,11 @@ payslipsRouter.get('/:id', authorize('payroll:read'), async (req, res) => {
   res.json(await service.get(getActor(req), parseId(req.params)));
 });
 
+payslipsRouter.delete('/:id', authorize('payslips:delete'), async (req, res) => {
+  await service.remove(parseId(req.params));
+  res.status(204).send();
+});
+
 payslipsRouter.post('/:id/recompute', authorize('payslips:write'), async (req, res) => {
   res.json(await service.recompute(getActor(req), parseId(req.params)));
 });

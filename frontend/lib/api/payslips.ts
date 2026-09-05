@@ -29,5 +29,6 @@ export const payslips = {
       queryFn: ({ signal }) => http.get<PayslipDetail>(`/payslips/${id}`, { signal }),
     }),
   recompute: (id: number) => http.post<PayslipDetail>(`/payslips/${id}/recompute`),
+  remove: (id: number) => http.delete<void>(`/payslips/${id}`),
   downloadPdf: (id: number) => http.download(`/payslips/${id}/pdf`),
 };

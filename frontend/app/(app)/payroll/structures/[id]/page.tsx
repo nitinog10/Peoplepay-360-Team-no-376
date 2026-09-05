@@ -10,7 +10,7 @@ export default async function SalaryStructureDetailPage(props: PageProps<"/payro
 
   return (
     <RequirePermission permission="salary-config:read">
-      <SalaryStructureDetail salaryStructureId={salaryStructureId} editable={false} />
+      <SalaryStructureDetail salaryStructureId={salaryStructureId} editable />
     </RequirePermission>
   );
 }

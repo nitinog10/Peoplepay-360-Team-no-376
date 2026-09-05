@@ -7,6 +7,7 @@ import { attendance } from "./attendance";
 import { auth } from "./client";
 import { contracts } from "./contracts";
 import { departments } from "./departments";
+import { dashboard } from "./dashboard";
 import { employees } from "./employees";
 import { leaveBalances } from "./leave-balances";
 import { leaveTypes } from "./leave-types";
@@ -22,6 +23,7 @@ export const api = {
   attendance,
   auth,
   contracts,
+  dashboard,
   departments,
   employees,
   leaveBalances,
@@ -40,6 +42,7 @@ export { ApiError, download, hasAccessToken, http, onSessionEnded, refreshSessio
 /** The query keys, for `invalidateQueries` after a write. */
 export { attendanceKeys } from "./attendance";
 export { contractKeys } from "./contracts";
+export { dashboardKeys } from "./dashboard";
 export { departmentKeys } from "./departments";
 export { employeeKeys } from "./employees";
 export { leaveBalanceKeys } from "./leave-balances";
@@ -54,13 +57,14 @@ export { workScheduleKeys } from "./work-schedules";
 
 export type { ListRecordsQuery, MarkAbsencesResult, Punch } from "./attendance";
 export type { ListContractsQuery, ContractBody, UpdateContractBody } from "./contracts";
+export type { PayrollDashboardQuery } from "./dashboard";
 export type { ListEmployeesQuery, CreateScheduleAssignmentBody, UpdateScheduleAssignmentBody } from "./employees";
 export type { MyBalancesResponse, ListBalancesQuery, CreateBalanceBody, UpdateBalanceBody, InitializeYearBody, InitializeYearResult, RecomputeResult } from "./leave-balances";
 export type { LeaveTypeBody } from "./leave-types";
 export type { CreatePayrunBody, EligibilityQuery, ListPayrunsQuery } from "./payruns";
 export type { ListPayslipsQuery } from "./payslips";
-export type { ListSalaryRulesQuery } from "./salary-rules";
-export type { ListSalaryStructuresQuery } from "./salary-structures";
+export type { ListSalaryRulesQuery, SalaryRuleBody } from "./salary-rules";
+export type { ListSalaryStructuresQuery, ReorderSalaryRulesBody, SalaryStructureBody } from "./salary-structures";
 export type { ListTimeOffRequestsQuery, TimeOffRequestBody, DecisionTimeOffBody } from "./time-off";
 export type { ListUsersQuery, CreateUserBody, UpdateUserBody } from "./users";
 export type { WorkScheduleBody } from "./work-schedules";

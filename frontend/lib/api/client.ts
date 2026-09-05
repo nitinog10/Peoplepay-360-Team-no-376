@@ -45,16 +45,7 @@ export class ApiError extends Error {
     this.name = "ApiError";
   }
 
-  /**
-   * The error projected onto form field names, for RHF's `setError`.
-   *
-   * - 400 VALIDATION_ERROR: one entry per Zod issue, keyed by its `path`.
-   * - 409 UNIQUE_VIOLATION: `details.target` is the MySQL index name
-   *   (`departments_department_name_key`), so it has to be matched back against
-   *   the field names the caller passes in.
-   *
-   * Everything else returns `{}` and belongs in a form-level banner.
-   */
+  /** Project API validation/conflict details onto RHF field names. */
   fieldErrors(fields: readonly string[] = []): Record<string, string> {
     const out: Record<string, string> = {};
     if (this.code === "VALIDATION_ERROR" && Array.isArray(this.details)) {
@@ -62,6 +53,13 @@ export class ApiError extends Error {
         if (issue?.path && !(issue.path in out)) out[issue.path] = issue.message;
       }
       return out;
+    }
+    if (this.details && typeof this.details === "object" && !Array.isArray(this.details)) {
+      for (const field of fields) {
+        const message = (this.details as Record<string, unknown>)[field];
+        if (typeof message === "string") out[field] = message;
+      }
+      if (Object.keys(out).length > 0) return out;
     }
     if (this.code === "UNIQUE_VIOLATION") {
       const field = this.uniqueField(fields);

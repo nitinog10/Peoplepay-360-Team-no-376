@@ -139,3 +139,17 @@ export async function pdf(actor: Actor, payslipId: number) {
   const safeName = `${row.employee.firstName}-${row.employee.lastName}`.replace(/[^a-zA-Z0-9-]/g, '-').toLowerCase();
   return { buffer, filename: `payslip-${safeName}-${payslipId}.pdf` };
 }
+
+export async function remove(payslipId: number) {
+  const slip = await prisma.payslip.findUnique({
+    where: { payslipId },
+    select: { payrun: { select: { status: true } } },
+  });
+  if (!slip) throw new NotFoundError('Payslip', payslipId);
+  if (slip.payrun.status !== 'DRAFT') {
+    throw new BusinessRuleError(`Only payslips in a DRAFT payrun can be deleted (current: ${slip.payrun.status})`, {
+      status: slip.payrun.status,
+    });
+  }
+  await prisma.payslip.delete({ where: { payslipId } });
+}

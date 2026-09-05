@@ -2,9 +2,9 @@
 
 Ordered, one-step-at-a-time build queue derived from `docs/overall-implementation-plan.md` (status audit), `docs/phase-1-plan.md` (Phases 1–2 schema/rules/API), and `docs/phase-3-plan.md` (implemented provisional payroll contract). Those documents stay the source of truth for **what exists**; this file is the queue of **what to build next, in the order to build it**.
 
-Written 2026-09-05 and fully refreshed after the combined Phase 1–3 delivery. Phase 1–3 backend and frontend are now ✅. Phase 3 used the documented provisional-schema path because authoritative Phase 3/4 team SQL is still unavailable; reconciliation remains required when that SQL arrives.
+Written 2026-09-05 and fully refreshed after the combined Phase 1–4 delivery. Phase 1–4 backend and frontend are now ✅. The payroll schema remains the documented provisional implementation because authoritative Phase 3/4 team SQL is still unavailable; reconciliation remains required when that SQL arrives.
 
-**Final P1/P2/P3 verification — 2026-09-05.** P1-1…P1-5, P2-1…P2-10 and P3-0…P3-12 are implemented and the combined gate passed: frontend Next.js 16.3.4 Webpack production build, typecheck and lint; backend Prisma generation and typecheck; 81/81 unit tests; fresh ephemeral MySQL 8.4.9 with both migrations and an idempotent seed; and 84/84 end-to-end smoke checks. The prior default Turbopack attempt exited `-1` without a diagnostic, so the verified production-build command remains `npm run build -- --webpack`. Full evidence and known limitations are recorded in [§ P1/P2/P3 final verification](#p1p2p3-final-verification-2026-09-05) at the end of this file. **P4-1 is now the next executable step.**
+**Final P1/P2/P3/P4 verification — 2026-09-06.** P1-1…P1-5, P2-1…P2-10, P3-0…P3-12 and P4-1…P4-7 are implemented and the combined gate passed: frontend Next.js 16.3.4 Webpack production build (24/24 static pages), typecheck and zero-warning lint; backend Prisma generation and typecheck; **82/82** unit tests; fresh ephemeral MySQL 8.4.9 with both migrations and a repeatable seed; and **113/113** end-to-end smoke checks. Dashboard figures were independently reproduced from direct Prisma queries. The verified production-build command remains `npm run build -- --webpack`. Full Phase 4 evidence and known limitations are recorded in [§ Phase 4 final verification](#phase-4-final-verification-2026-09-06) at the end of this file. **P5-1 is now the next executable step.**
 
 ## How to use this file
 
@@ -30,10 +30,10 @@ Every `ts-backend` row below is a real npm script as of P0-1 — the old `npx �
 | `ts-backend` apply + seed | `npm run prisma:deploy && npm run prisma:seed` |
 | `ts-backend` run | `npm run dev` → `http://localhost:8000/api/v1` |
 | `ts-backend` throwaway DB | `npm run db:ephemeral` (`EPHEMERAL_PORT=3307` pins the port). This machine's baseline — no Docker, no local MySQL; see the comment at the top of `.env` |
-| `ts-backend` unit tests | `npm test` — 81/81 tests in 5 files, no database (current P1/P2/P3 gate) |
-| `ts-backend` smoke | `npm run smoke` (`API_URL` defaults to localhost:8000) — 84/84 across P1/P2/P3 on fresh ephemeral MySQL 8.4.9 |
+| `ts-backend` unit tests | `npm test` — **82/82 tests in 5 files**, no database (current Phase 1–4 gate) |
+| `ts-backend` smoke | `npm run smoke` (`API_URL` defaults to localhost:8000) — **113/113** across Phase 1–4 on fresh ephemeral MySQL 8.4.9 |
 | `frontend` install / run | `npm install` · `npm run dev` → `http://localhost:3000` |
-| `frontend` verify | `npx tsc --noEmit` · `npm run lint` · `$env:NODE_OPTIONS='--max-old-space-size=4096'; npm run build -- --webpack` — combined P1/P2/P3 gate green; Next.js 16.3.4 generated all payroll routes and 23/23 static pages; the prior default Turbopack attempt exited `-1` without diagnostics |
+| `frontend` verify | `npx next typegen` · `npx tsc --noEmit` · `npm run lint` · `$env:NODE_OPTIONS='--max-old-space-size=4096'; npm run build -- --webpack` — combined Phase 1–4 gate green; Next.js 16.3.4 generated `/payroll/dashboard` and completed 24/24 static pages |
 
 ## The API contract every screen codes against (verified in source)
 
@@ -97,13 +97,13 @@ Legend: ❌ not started · 🟡 in progress · ✅ done and gate passed.
 | P3-11 | UI payslips list + payslip detail + print | M | P3-6, P3-10 | ✅ |
 | P3-12 | UI salary structures / rules (read-only) | S | P3-3 | ✅ |
 | **P4** | **Phase 4 — ④ HR_PAYROLL_MANAGER (config + dashboard)** | | | |
-| P4-1 | Role + config-write permissions | S | P3-2 | ❌ |
-| P4-2 | Structures & rules write endpoints | M | P4-1 | ❌ |
-| P4-3 | Payrun / payslip delete + cancel | S | P4-1 | ❌ |
-| P4-4 | Payroll dashboard aggregate endpoint | L | P3-6 | ❌ |
-| P4-5 | UI structures & rules editors | M | P4-2, P3-12 | ❌ |
-| P4-6 | UI payroll dashboard (KPIs, charts, alerts) | L | P4-4 | ❌ |
-| P4-7 | Smoke: config-write boundaries | S | P4-2 | ❌ |
+| P4-1 | Role + config-write permissions | S | P3-2 | ✅ |
+| P4-2 | Structures & rules write endpoints | M | P4-1 | ✅ |
+| P4-3 | Payrun / payslip delete + cancel | S | P4-1 | ✅ |
+| P4-4 | Payroll dashboard aggregate endpoint | L | P3-6 | ✅ |
+| P4-5 | UI structures & rules editors | M | P4-2, P3-12 | ✅ |
+| P4-6 | UI payroll dashboard (KPIs, charts, alerts) | L | P4-4 | ✅ |
+| P4-7 | Smoke: config-write boundaries | S | P4-2 | ✅ |
 | **P5** | **Phase 5 — ⑤ ADMIN** | | | |
 | P5-1 | ADMIN role, all permissions, admin scoping, seed admin | M | P3-1 | ❌ |
 | P5-2 | Re-home `users:manage`; permission-matrix endpoint | S | P5-1 | ❌ |
@@ -118,7 +118,7 @@ Legend: ❌ not started · 🟡 in progress · ✅ done and gate passed.
 | P6-5 | Deployment: Docker API + MySQL, hosted frontend | M | P6-3 | ❌ |
 | P6-6 | Roadmap summary (PDF deliverable 3) | S | — | ❌ |
 
-**Parallel tracks.** P0, FE and Phases 1–3 are complete. The next executable step is P4-1; the Phase 3 payroll schema remains provisional and must be reconciled with authoritative Phase 3/4 SQL when supplied. P4/P5 features remain permission-gated and unreleased even though their enum/database role rows already exist.
+**Parallel tracks.** P0, FE and Phases 1–4 are complete. The next executable step is P5-1; the payroll schema remains provisional and must be reconciled with authoritative Phase 3/4 SQL when supplied. ADMIN remains permission-empty and unreleased until Phase 5.
 
 ---
 
@@ -730,6 +730,18 @@ Access: everything HR_PAYROLL_USER has, plus write on payroll config and delete 
   HR_PAYROLL_MANAGER success on the same, and historic-payslip immutability after a rule edit.
 - **Done when** smoke passes with the added checks.
 
+### Phase 4 completion evidence
+
+| Step | Verified result |
+|---|---|
+| P4-1 | ✅ Manager login exposes all 26 released permissions; `HR_PAYROLL_USER` remains read-only for config and cannot hard-delete payroll rows. |
+| P4-2 | ✅ Structure/rule create, edit, reorder and delete paths pass; duplicate code/sequence return 409; referenced deletes return 422 with deactivation guidance; paid snapshots remain unchanged after rule edits. |
+| P4-3 | ✅ DRAFT payslip/payrun deletion and cascade pass; COMPUTED/VALIDATED cancellation preserves history; VALIDATED, PAID and CANCELLED hard-delete attempts return 422. |
+| P4-4 | ✅ One live dashboard response applies common filters. Direct database checks reproduced payslip count **4**, monthly net **394337.50**, average generated salary **98584.38**, and approved time off **4 days** for the checked period. |
+| P4-5 | ✅ Permission-derived editors, method-aware rule forms, conflict mapping, atomic reorder and deactivate fallback pass typecheck/lint/build. |
+| P4-6 | ✅ `/payroll/dashboard` was emitted by the production build with URL-backed filters, linked KPIs, Recharts charts, alerts and breakdowns. |
+| P4-7 | ✅ Fresh-DB end-to-end smoke passed **113/113** checks. |
+
 ---
 
 # Phase 5 — ⑤ ADMIN
@@ -888,7 +900,7 @@ Seeded logins are unchanged: `hr.manager` / `ChangeMe123!` for HR, any employee'
 - **Nothing is committed.** Every change above sits in the working tree (`git status` lists the modified
   files, the one deletion and the new directories). The two sessions map cleanly onto two commits — one for
   P0, one for FE — whenever you want them.
-- **Next steps:** Phase 3 is complete; P4-1 is the next executable build step. The provisional payroll schema must still be reconciled with authoritative Phase 3/4 SQL when it arrives, but this is tracked as a schema-authority risk rather than rewriting the verified Phase 3 implementation as incomplete.
+- **Next steps:** Phase 4 is complete; P5-1 is the next executable build step. The provisional payroll schema must still be reconciled with authoritative Phase 3/4 SQL when it arrives, but this remains a tracked schema-authority risk rather than an incomplete implementation.
 
 ## Decisions this plan makes on your behalf
 
@@ -957,3 +969,21 @@ Known deviations and environment limitations:
 4. Missing SMTP intentionally uses Nodemailer's offline JSON transport rather than creating an Ethereal account or making an outbound request.
 
 No browser-only manual click-through was recorded in this automated gate. Compilation, route generation, permission boundaries, mutations, lifecycle failures, migration/seed, calculation, PDF response, and mail fallback are covered by the checks above.
+
+
+---
+
+# Phase 4 final verification (2026-09-06)
+
+Phase 4 (`HR_PAYROLL_MANAGER`, P4-1…P4-7) is implemented and was verified with the existing Phase 1–3 behavior. The final gate produced this evidence:
+
+- Backend static checks: `npm run prisma:generate` and `npm run typecheck` passed.
+- Unit tests: `npm test` passed **82/82 tests in 5 files**, including 14 permission-catalogue tests.
+- Integration: fresh ephemeral MySQL **8.4.9** applied `20260905000000_init` and `20260905010000_phase_3_payroll`, exposed **21 tables**, completed the representative seed, and completed an immediate second seed without duplicates.
+- End-to-end API/RBAC/business-rule smoke: `npm run smoke` passed **113/113 checks**. Phase 4 coverage includes manager permission supersets; lower-role 403s; config CRUD, conflicts, reorder and reference guards; DRAFT delete cascades; later-state cancellation/history preservation; paid-payslip snapshot immutability; and the aggregate dashboard response.
+- Dashboard audit: for `2026-08-01` through `2026-09-30`, independent Prisma queries reproduced the API's payslip count (**4**), monthly net total (**394337.50**), average salary per generated employee (**98584.38**) and approved time-off total (**4 days**).
+- Frontend static checks: `npx next typegen`, `npx tsc --noEmit`, and `npm run lint` passed with zero warnings.
+- Frontend production build: Next.js **16.3.4** passed with `$env:NODE_OPTIONS='--max-old-space-size=4096'; npm run build -- --webpack`; static generation completed **24/24** and emitted `/payroll/dashboard` plus all salary-config and payroll lifecycle routes.
+- Cleanup: temporary API and ephemeral database processes were stopped after validation.
+
+Known limitations remain unchanged: authoritative Phase 3/4 SQL has not been supplied, so the isolated payroll migration is provisional and must be reconciled later; no browser-only manual click-through was recorded; and the backend dependency audit finding (**5 vulnerabilities: 1 moderate, 4 high**) was not force-fixed without compatibility review.

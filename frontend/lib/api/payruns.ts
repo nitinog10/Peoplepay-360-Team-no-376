@@ -71,5 +71,6 @@ export const payruns = {
   validate: (id: number) => http.post<PayrunDetail>(`/payruns/${id}/validate`),
   markPaid: (id: number) => http.post<PayrunDetail>(`/payruns/${id}/mark-paid`),
   cancel: (id: number, reason: string) => http.post<PayrunDetail>(`/payruns/${id}/cancel`, { reason }),
+  remove: (id: number) => http.delete<void>(`/payruns/${id}`),
   sendPayslips: (id: number) => http.post<SendPayslipsResult>(`/payruns/${id}/send-payslips`),
 };

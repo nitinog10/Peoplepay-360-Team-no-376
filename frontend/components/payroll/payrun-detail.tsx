@@ -10,10 +10,12 @@ import {
   LoaderCircleIcon,
   MailIcon,
   RefreshCwIcon,
+  Trash2Icon,
   TriangleAlertIcon,
   WalletCardsIcon,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -41,6 +43,7 @@ import { useCan } from "@/hooks/use-can";
 import {
   api,
   ApiError,
+  dashboardKeys,
   payrunKeys,
   payslipKeys,
   type PayrollWarning,
@@ -151,6 +154,7 @@ function SendResultsDialog({ result, onClose }: { result: SendPayslipsResult | n
 
 export function PayrunDetail({ payrunId }: { payrunId: number }) {
   const { can } = useCan();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
@@ -211,6 +215,21 @@ export function PayrunDetail({ payrunId }: { payrunId: number }) {
     onError: (error) => toast.error(errorMessage(error, "Could not recompute the payslip.")),
   });
 
+  const remove = useMutation({
+    mutationFn: () => api.payruns.remove(payrunId),
+    onSuccess: async () => {
+      queryClient.removeQueries({ queryKey: payrunKeys.detail(payrunId) });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: payrunKeys.all }),
+        queryClient.invalidateQueries({ queryKey: payslipKeys.all }),
+        queryClient.invalidateQueries({ queryKey: dashboardKeys.all }),
+      ]);
+      toast.success("Draft payrun deleted.");
+      router.push("/payroll/payruns");
+    },
+    onError: (error) => toast.error(errorMessage(error, "Could not delete the payrun.")),
+  });
+
   if (isForbidden(query.error)) return <Forbidden title="Payroll access denied" description="You do not have access to this payrun." />;
   if (query.isPending) return <div className="mx-auto flex w-full max-w-content flex-col gap-4 px-4 py-8"><Skeleton className="h-24" /><Skeleton className="h-40" /><Skeleton className="h-64" /></div>;
   if (query.error || !query.data) return <div className="mx-auto w-full max-w-content px-4 py-8"><p role="alert" className="rounded-xl border p-6 text-sm text-destructive">{errorMessage(query.error, "Could not load the payrun.")}</p></div>;
@@ -218,9 +237,10 @@ export function PayrunDetail({ payrunId }: { payrunId: number }) {
   const run = query.data;
   const canWriteRun = can("payruns:write");
   const canWriteSlip = can("payslips:write");
+  const canDeleteRun = can("payruns:delete");
   const mutable = run.status === "DRAFT" || run.status === "COMPUTED";
-  const cancellable = mutable || run.status === "VALIDATED";
-  const actionPending = lifecycle.isPending || cancel.isPending || send.isPending || recompute.isPending;
+  const cancellable = run.status === "COMPUTED" || run.status === "VALIDATED";
+  const actionPending = lifecycle.isPending || cancel.isPending || send.isPending || recompute.isPending || remove.isPending;
   const canValidate = run.status === "COMPUTED" && warningsQuery.isSuccess && warningsQuery.data.counts.hard === 0;
 
   return (
@@ -232,6 +252,7 @@ export function PayrunDetail({ payrunId }: { payrunId: number }) {
         {canWriteRun && run.status === "COMPUTED" && <Button disabled={actionPending || !canValidate} title={!canValidate ? "Resolve hard warnings before validation" : undefined} onClick={() => lifecycle.mutate("validate")}>{lifecycle.isPending && lifecycle.variables === "validate" ? <LoaderCircleIcon className="animate-spin" /> : <CheckCircle2Icon />}Validate</Button>}
         {canWriteRun && run.status === "VALIDATED" && <Button disabled={actionPending} onClick={() => { if (window.confirm("Mark this payrun as paid? This makes the payroll immutable.")) lifecycle.mutate("mark-paid"); }}>{lifecycle.isPending && lifecycle.variables === "mark-paid" ? <LoaderCircleIcon className="animate-spin" /> : <WalletCardsIcon />}Mark paid</Button>}
         {canWriteRun && (run.status === "VALIDATED" || run.status === "PAID") && <Button variant="outline" disabled={actionPending} onClick={() => { if (window.confirm("Send every computed payslip in this payrun? Repeating this action may send duplicate emails.")) send.mutate(); }}>{send.isPending ? <LoaderCircleIcon className="animate-spin" /> : <MailIcon />}Send payslips</Button>}
+        {canDeleteRun && run.status === "DRAFT" && <Button variant="destructive" disabled={actionPending} onClick={() => { if (window.confirm("Delete this draft payrun and all of its payslip shells? This cannot be undone.")) remove.mutate(); }}>{remove.isPending ? <LoaderCircleIcon className="animate-spin" /> : <Trash2Icon />}Delete draft</Button>}
         {canWriteRun && cancellable && (
           <Dialog open={cancelOpen} onOpenChange={(open) => { setCancelOpen(open); setCancelError(null); if (!open) setCancelReason(""); }}>
             <DialogTrigger asChild><Button variant="destructive" disabled={actionPending}><BanIcon />Cancel</Button></DialogTrigger>
