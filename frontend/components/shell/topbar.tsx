@@ -16,7 +16,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useSession } from "@/lib/auth/session";
 
-/** `HR_PAYROLL_USER` → "HR Payroll User"; prettified so P3–P5's roles need no edit here. */
 function roleLabel(role: string): string {
   return role
     .split("_")
@@ -24,11 +23,7 @@ function roleLabel(role: string): string {
     .join(" ");
 }
 
-/**
- * `attendance` is the slot FE-5's punch widget drops into — the topbar itself knows
- * nothing about attendance, so the shell can be built and gated before the widget
- * exists.
- */
+/** Compact global actions: attendance, theme, account and the mobile menu. */
 export function Topbar({
   onOpenSidebar,
   attendance,
@@ -55,7 +50,7 @@ export function Topbar({
   }
 
   return (
-    <header className="flex h-topbar shrink-0 items-center gap-2 border-b bg-background px-3">
+    <header className="flex h-topbar shrink-0 items-center gap-2 border-b bg-background/92 px-3 backdrop-blur-md sm:px-4">
       <Button
         variant="ghost"
         size="icon-sm"
@@ -65,24 +60,25 @@ export function Topbar({
       >
         <MenuIcon />
       </Button>
+      <span className="font-display text-lg font-semibold md:hidden">PeoplePay</span>
 
-      <div className="ml-auto flex items-center gap-2">
+      <div className="ml-auto flex min-w-0 items-center gap-1.5 sm:gap-2">
         {attendance}
         <ThemeToggle />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-9 gap-2 px-2">
+            <Button variant="ghost" className="h-9 min-w-0 gap-2 px-1.5 sm:px-2">
               <span
                 aria-hidden
-                className="grid size-6 place-items-center rounded-full bg-primary text-[11px] font-semibold text-primary-foreground"
+                className="grid size-7 shrink-0 place-items-center rounded-full bg-primary text-[11px] font-semibold text-primary-foreground"
               >
                 {initials}
               </span>
-              <span className="hidden max-w-40 truncate text-sm sm:inline">{name}</span>
+              <span className="hidden max-w-40 truncate text-sm lg:inline">{name}</span>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuContent align="end" className="w-60">
             <DropdownMenuLabel className="flex flex-col gap-1">
               <span className="truncate">{name}</span>
               <span className="truncate text-xs font-normal text-muted-foreground">

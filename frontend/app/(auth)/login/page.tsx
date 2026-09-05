@@ -76,7 +76,7 @@ export default function LoginPage() {
   return (
     <Card className="w-full max-w-sm">
       <CardHeader>
-        <CardTitle className="font-heading text-xl">Sign in</CardTitle>
+        <CardTitle className="font-display text-xl">Sign in</CardTitle>
         <CardDescription>
           Use your username or your work email address.
         </CardDescription>

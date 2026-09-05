@@ -7,9 +7,10 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-inter);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-geist-sans);
+  --font-heading: var(--font-inter);
+  --font-display: var(--font-caveat);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -39,176 +40,6 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
-}
-
-:root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-}
-
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
-}
-
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-  html {
-    @apply font-sans;
-  }
-}
-
-/* ─────────────────────────────────────────────────────────────────────────────
-   PeoplePay360 design tokens
-
-   Everything above this line is shadcn's `init` output (radix / nova preset) —
-   leave it alone so a future `shadcn add` diffs cleanly. Everything below is
-   ours: a brand ramp, semantic status colours, a categorical chart palette and
-   the shell metrics. The `:root` / `.dark` blocks here re-declare a handful of
-   shadcn tokens; they win because they come later in the file.
-
-   Why the ramp lives in `:root` and not in `@theme`: Tailwind only emits theme
-   variables that a generated utility references, so a `@theme` value read from
-   hand-written CSS (`--primary: var(--color-brand-600)`) can vanish from the
-   build. Declaring the literals in `:root` and mapping them with `@theme inline`
-   is the same indirection shadcn uses, and it survives tree-shaking.
-   ───────────────────────────────────────────────────────────────────────────── */
-
-:root {
-  /* Brand ramp — indigo-blue, scheme independent (no `.dark` override). */
-  --brand-50: oklch(0.977 0.014 254);
-  --brand-100: oklch(0.95 0.032 255);
-  --brand-200: oklch(0.906 0.062 255);
-  --brand-300: oklch(0.84 0.1 256);
-  --brand-400: oklch(0.74 0.155 258);
-  --brand-500: oklch(0.64 0.192 260);
-  --brand-600: oklch(0.548 0.21 262);
-  --brand-700: oklch(0.474 0.196 263);
-  --brand-800: oklch(0.404 0.166 264);
-  --brand-900: oklch(0.352 0.132 265);
-  --brand-950: oklch(0.264 0.098 266);
-
-  /* Semantic status colours. Solid fills; badges use them at /10 opacity the
-     way the generated `destructive` variants do. */
-  --success: oklch(0.58 0.14 152);
-  --success-foreground: oklch(0.985 0.01 152);
-  --warning: oklch(0.62 0.145 62);
-  --warning-foreground: oklch(0.985 0.01 62);
-  --info: oklch(0.58 0.15 236);
-  --info-foreground: oklch(0.985 0.01 236);
-
-  /* Brand-tinted interactive surfaces, replacing the preset's achromatic set. */
-  --primary: var(--brand-600);
-  --primary-foreground: oklch(0.985 0.005 262);
-  --ring: var(--brand-500);
-  --sidebar-primary: var(--brand-600);
-  --sidebar-primary-foreground: oklch(0.985 0.005 262);
-  --sidebar-ring: var(--brand-500);
-
-  /* Categorical, not a single-hue ramp — the P4-6 dashboard needs series that
-     stay distinguishable next to each other. */
-  --chart-1: oklch(0.548 0.21 262);
-  --chart-2: oklch(0.6 0.13 185);
-  --chart-3: oklch(0.65 0.16 145);
-  --chart-4: oklch(0.7 0.15 75);
-  --chart-5: oklch(0.6 0.19 15);
-}
-
-.dark {
-  /* Lift the mid-tones so brand fills keep contrast on the dark ground. */
-  --success: oklch(0.72 0.15 152);
-  --success-foreground: oklch(0.16 0.03 152);
-  --warning: oklch(0.78 0.15 70);
-  --warning-foreground: oklch(0.16 0.03 70);
-  --info: oklch(0.72 0.14 236);
-  --info-foreground: oklch(0.16 0.03 236);
-
-  --primary: var(--brand-400);
-  --primary-foreground: oklch(0.17 0.04 264);
-  --ring: var(--brand-500);
-  --sidebar-primary: var(--brand-400);
-  --sidebar-primary-foreground: oklch(0.17 0.04 264);
-  --sidebar-ring: var(--brand-500);
-
-  --chart-1: oklch(0.7 0.16 262);
-  --chart-2: oklch(0.72 0.12 185);
-  --chart-3: oklch(0.76 0.15 145);
-  --chart-4: oklch(0.8 0.14 75);
-  --chart-5: oklch(0.7 0.17 15);
-}
-
-@theme inline {
   --color-brand-50: var(--brand-50);
   --color-brand-100: var(--brand-100);
   --color-brand-200: var(--brand-200);
@@ -220,20 +51,165 @@
   --color-brand-800: var(--brand-800);
   --color-brand-900: var(--brand-900);
   --color-brand-950: var(--brand-950);
-
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
   --color-info: var(--info);
   --color-info-foreground: var(--info-foreground);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  --background: #ffffff;
+  --foreground: #292326;
+  --card: #ffffff;
+  --card-foreground: #292326;
+  --popover: #ffffff;
+  --popover-foreground: #292326;
+  --primary: #714b67;
+  --primary-foreground: #ffffff;
+  --secondary: #f3f4f6;
+  --secondary-foreground: #292326;
+  --muted: #f3f4f6;
+  --muted-foreground: #6f6870;
+  --accent: #f4edf2;
+  --accent-foreground: #624055;
+  --destructive: #d94a5d;
+  --border: #e5e1e4;
+  --input: #d8d2d7;
+  --ring: #96697f;
+  --radius: 0.75rem;
+
+  /* Visual reference palette. Pink stays reserved for destructive/rare callouts. */
+  --brand-50: #fbf8fa;
+  --brand-100: #f4edf2;
+  --brand-200: #e7d8e2;
+  --brand-300: #d5bacb;
+  --brand-400: #b98fa8;
+  --brand-500: #96697f;
+  --brand-600: #714b67;
+  --brand-700: #624055;
+  --brand-800: #523648;
+  --brand-900: #452f3d;
+  --brand-950: #2b1b26;
+
+  --success: #146f66;
+  --success-foreground: #ffffff;
+  --warning: #f0a72f;
+  --warning-foreground: #362200;
+  --info: #2ebcf4;
+  --info-foreground: #082c3a;
+  --chart-1: #714b67;
+  --chart-2: #14d3bb;
+  --chart-3: #f86126;
+  --chart-4: #2ebcf4;
+  --chart-5: #146f66;
+
+  --sidebar: #ffffff;
+  --sidebar-foreground: #352d32;
+  --sidebar-primary: #714b67;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f4edf2;
+  --sidebar-accent-foreground: #624055;
+  --sidebar-border: #e8e3e7;
+  --sidebar-ring: #96697f;
+}
+
+.dark {
+  --background: #1c181b;
+  --foreground: #faf7f9;
+  --card: #272126;
+  --card-foreground: #faf7f9;
+  --popover: #2b2429;
+  --popover-foreground: #faf7f9;
+  --primary: #d5bacb;
+  --primary-foreground: #2b1b26;
+  --secondary: #332c31;
+  --secondary-foreground: #faf7f9;
+  --muted: #332c31;
+  --muted-foreground: #b8afb5;
+  --accent: #432f3d;
+  --accent-foreground: #f4edf2;
+  --destructive: #fc868b;
+  --border: #433a40;
+  --input: #544850;
+  --ring: #b98fa8;
+  --success: #35c2b1;
+  --success-foreground: #102c29;
+  --warning: #f6bf59;
+  --warning-foreground: #362200;
+  --info: #65cef7;
+  --info-foreground: #082c3a;
+  --sidebar: #231e22;
+  --sidebar-foreground: #f7f2f5;
+  --sidebar-primary: #d5bacb;
+  --sidebar-primary-foreground: #2b1b26;
+  --sidebar-accent: #432f3d;
+  --sidebar-accent-foreground: #f4edf2;
+  --sidebar-border: #3d353a;
+  --sidebar-ring: #b98fa8;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    @apply font-sans;
+    max-width: 100%;
+    overflow-x: clip;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    max-width: 100%;
+    overflow-x: clip;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--brand-300) 72%, transparent);
+    color: var(--foreground);
+  }
+}
+
+@layer components {
+  /* A restrained hand-drawn highlighter: used only on page-level headings. */
+  .sketch-underline {
+    position: relative;
+    isolation: isolate;
+    width: fit-content;
+    max-width: 100%;
+  }
+
+  .sketch-underline::after {
+    position: absolute;
+    z-index: -1;
+    right: -0.12em;
+    bottom: 0.08em;
+    left: -0.12em;
+    height: 0.3em;
+    border-radius: 58% 42% 62% 38%;
+    background: color-mix(in srgb, #14d3bb 42%, transparent);
+    content: "";
+    transform: rotate(-0.8deg) skewX(-8deg);
+  }
+
+  .dark .sketch-underline::after {
+    background: color-mix(in srgb, #14d3bb 28%, transparent);
+  }
 }
 
 @theme {
-  /* Shell metrics, so the sidebar/topbar widths are stated once. Only ever read
-     through utilities (`w-sidebar`, `h-topbar`), so a plain `@theme` is safe. */
-  --spacing-sidebar: 15rem;
+  --spacing-sidebar: 16rem;
   --spacing-sidebar-collapsed: 3.5rem;
-  --spacing-topbar: 3.5rem;
+  --spacing-topbar: 4rem;
   --spacing-content: 84rem;
 }

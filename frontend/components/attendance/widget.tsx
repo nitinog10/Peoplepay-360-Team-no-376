@@ -190,13 +190,18 @@ export function AttendanceWidget() {
             {onBreak ? <PlayIcon /> : <PauseIcon />}
             <span className="hidden sm:inline">{onBreak ? "End break" : "Break"}</span>
           </Button>
-          <Button size="sm" disabled={busy} onClick={() => act("clock-out")}>
-            <LogOutIcon /> Check Out
+          <Button
+            size="sm"
+            disabled={busy}
+            aria-label="Check out"
+            onClick={() => act("clock-out")}
+          >
+            <LogOutIcon /> <span className="hidden min-[480px]:inline">Check Out</span>
           </Button>
         </>
       ) : (
-        <Button size="sm" disabled={busy} onClick={() => act("clock-in")}>
-          <LogInIcon /> Check In
+        <Button size="sm" disabled={busy} aria-label="Check in" onClick={() => act("clock-in")}>
+          <LogInIcon /> <span className="hidden min-[480px]:inline">Check In</span>
         </Button>
       )}
     </div>
