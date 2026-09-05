@@ -2,9 +2,9 @@
 
 Ordered, one-step-at-a-time build queue derived from `docs/overall-implementation-plan.md` (status audit), `docs/phase-1-plan.md` (Phases 1–2 schema/rules/API), and `docs/phase-3-plan.md` (implemented provisional payroll contract). Those documents stay the source of truth for **what exists**; this file is the queue of **what to build next, in the order to build it**.
 
-Written 2026-09-05 and fully refreshed after the combined Phase 1–4 delivery. Phase 1–4 backend and frontend are now ✅. The payroll schema remains the documented provisional implementation because authoritative Phase 3/4 team SQL is still unavailable; reconciliation remains required when that SQL arrives.
+Written 2026-09-05 and fully refreshed after the combined Phase 1–5 delivery. Phase 1–5 backend and frontend are now ✅. The payroll schema remains the documented provisional implementation because authoritative Phase 3/4 team SQL is still unavailable; reconciliation remains required when that SQL arrives.
 
-**Final P1/P2/P3/P4 verification — 2026-09-06.** P1-1…P1-5, P2-1…P2-10, P3-0…P3-12 and P4-1…P4-7 are implemented and the combined gate passed: frontend Next.js 16.3.4 Webpack production build (24/24 static pages), typecheck and zero-warning lint; backend Prisma generation and typecheck; **82/82** unit tests; fresh ephemeral MySQL 8.4.9 with both migrations and a repeatable seed; and **113/113** end-to-end smoke checks. Dashboard figures were independently reproduced from direct Prisma queries. The verified production-build command remains `npm run build -- --webpack`. Full Phase 4 evidence and known limitations are recorded in [§ Phase 4 final verification](#phase-4-final-verification-2026-09-06) at the end of this file. **P5-1 is now the next executable step.**
+**Final P1/P2/P3/P4/P5 verification — 2026-09-06.** P1-1…P1-5, P2-1…P2-10, P3-0…P3-12, P4-1…P4-7 and P5-1…P5-5 are implemented and the combined gate passed: frontend Next.js 16.3.4 Webpack production build (**25/25** static pages), typecheck and zero-warning lint; backend Prisma generation, production build and typecheck; **82/82** unit tests; fresh ephemeral MySQL 8.4.9 with both migrations and an immediate repeatable seed; and **145/145** end-to-end smoke checks. The verified production-build command remains `npm run build -- --webpack`. Full Phase 5 evidence and known limitations are recorded in [§ Phase 5 final verification](#phase-5-final-verification-2026-09-06) at the end of this file. **P6-1 is now the next executable step.**
 
 ## How to use this file
 
@@ -30,10 +30,10 @@ Every `ts-backend` row below is a real npm script as of P0-1 — the old `npx �
 | `ts-backend` apply + seed | `npm run prisma:deploy && npm run prisma:seed` |
 | `ts-backend` run | `npm run dev` → `http://localhost:8000/api/v1` |
 | `ts-backend` throwaway DB | `npm run db:ephemeral` (`EPHEMERAL_PORT=3307` pins the port). This machine's baseline — no Docker, no local MySQL; see the comment at the top of `.env` |
-| `ts-backend` unit tests | `npm test` — **82/82 tests in 5 files**, no database (current Phase 1–4 gate) |
-| `ts-backend` smoke | `npm run smoke` (`API_URL` defaults to localhost:8000) — **113/113** across Phase 1–4 on fresh ephemeral MySQL 8.4.9 |
+| `ts-backend` unit tests | `npm test` — **82/82 tests in 5 files**, no database (current Phase 1–5 gate) |
+| `ts-backend` smoke | `npm run smoke` (`API_URL` defaults to localhost:8000) — **145/145** across Phase 1–5 on fresh ephemeral MySQL 8.4.9 |
 | `frontend` install / run | `npm install` · `npm run dev` → `http://localhost:3000` |
-| `frontend` verify | `npx next typegen` · `npx tsc --noEmit` · `npm run lint` · `$env:NODE_OPTIONS='--max-old-space-size=4096'; npm run build -- --webpack` — combined Phase 1–4 gate green; Next.js 16.3.4 generated `/payroll/dashboard` and completed 24/24 static pages |
+| `frontend` verify | `npx next typegen` · `npx tsc --noEmit` · `npm run lint` · `$env:NODE_OPTIONS='--max-old-space-size=4096'; npm run build -- --webpack` — combined Phase 1–5 gate green; Next.js 16.3.4 generated `/admin/roles` and completed **25/25** static pages |
 
 ## The API contract every screen codes against (verified in source)
 
@@ -105,11 +105,11 @@ Legend: ❌ not started · 🟡 in progress · ✅ done and gate passed.
 | P4-6 | UI payroll dashboard (KPIs, charts, alerts) | L | P4-4 | ✅ |
 | P4-7 | Smoke: config-write boundaries | S | P4-2 | ✅ |
 | **P5** | **Phase 5 — ⑤ ADMIN** | | | |
-| P5-1 | ADMIN role, all permissions, admin scoping, seed admin | M | P3-1 | ❌ |
-| P5-2 | Re-home `users:manage`; permission-matrix endpoint | S | P5-1 | ❌ |
-| P5-3 | UI user management | M | P5-2, P2-10 | ❌ |
-| P5-4 | UI roles & permissions matrix | S | P5-2 | ❌ |
-| P5-5 | Smoke: admin boundaries | S | P5-2 | ❌ |
+| P5-1 | ADMIN role, all permissions, admin scoping, seed admin | M | P3-1 | ✅ |
+| P5-2 | Re-home `users:manage`; permission-matrix endpoint | S | P5-1 | ✅ |
+| P5-3 | UI user management | M | P5-2, P2-10 | ✅ |
+| P5-4 | UI roles & permissions matrix | S | P5-2 | ✅ |
+| P5-5 | Smoke: admin boundaries | S | P5-2 | ✅ |
 | **P6** | **Deliverables & hardening** | | | |
 | P6-1 | Rule tests for HR + payroll services | M | P0-3 | ❌ |
 | P6-2 | OpenAPI / request collection | M | P3-6 | ❌ |
@@ -118,7 +118,7 @@ Legend: ❌ not started · 🟡 in progress · ✅ done and gate passed.
 | P6-5 | Deployment: Docker API + MySQL, hosted frontend | M | P6-3 | ❌ |
 | P6-6 | Roadmap summary (PDF deliverable 3) | S | — | ❌ |
 
-**Parallel tracks.** P0, FE and Phases 1–4 are complete. The next executable step is P5-1; the payroll schema remains provisional and must be reconciled with authoritative Phase 3/4 SQL when supplied. ADMIN remains permission-empty and unreleased until Phase 5.
+**Parallel tracks.** P0, FE and Phases 1–5 are complete. The next executable step is P6-1; the payroll schema remains provisional and must be reconciled with authoritative Phase 3/4 SQL when supplied. ADMIN is released with all 27 permissions, unrestricted row scope, constrained lower-role user management, and permission-driven administration screens.
 
 ---
 
@@ -752,6 +752,8 @@ Access: everything HR_PAYROLL_USER has, plus write on payroll config and delete 
 - **Do** `ADMIN` = every permission; include ADMIN in `canSeeAllEmployees()`; seed the first admin from
   `SEED_ADMIN_USERNAME` / `SEED_ADMIN_PASSWORD` (validated env, documented).
 - **Done when** the admin login reaches every module's list and `/auth/me` returns the full catalogue.
+- ✅ **Done 2026-09-06.** ADMIN receives the exact 27-permission catalogue, has unrestricted employee scope,
+  reaches every released module list, and the idempotent `admin` seed login is validated and documented.
 
 ### P5-2 — Re-home user management + permission matrix · S · needs P5-1
 
@@ -760,6 +762,9 @@ Access: everything HR_PAYROLL_USER has, plus write on payroll config and delete 
   `GET /roles/permissions` returning the role × permission matrix so the UI stops hardcoding it.
 - **Done when** HR_MANAGER creating an HR_PAYROLL_USER login gets 403 while creating an EMPLOYEE login still
   works, and the matrix endpoint matches `ROLE_PERMISSIONS` exactly.
+- ✅ **Done 2026-09-06.** ADMIN receives all five assignable roles; non-ADMIN account managers receive only
+  EMPLOYEE. Create and update escalation to every privileged role, plus password/deactivation takeover of a
+  privileged target, return 403. The ADMIN-only matrix exactly matches all five code-defined role sets.
 
 ### P5-3 — UI user management · M · needs P5-2, P2-10
 
@@ -770,18 +775,26 @@ Access: everything HR_PAYROLL_USER has, plus write on payroll config and delete 
 - **Done when** an admin can create and immediately log in as a user of each role, and deactivation blocks
   future login/refresh. Immediate access-token invalidation requires the token-version/per-request check
   recorded in the P1/P2 verification notes.
+- ✅ **Done 2026-09-06.** The existing `/users` route now supports all five roles through an accessible side
+  drawer while preserving limited-HR controls. Smoke created each role, logged in immediately, deactivated
+  it, rejected its next login and refresh with 401, and removed every temporary employee/user fixture.
 
 ### P5-4 — UI roles & permissions matrix · S · needs P5-2
 
 - **Do** read-only module × action × role grid from `GET /roles/permissions`, with a note that permissions
   are code-defined in this build (not data-driven).
 - **Done when** the grid matches `src/auth/permissions.ts` for all five roles.
+- ✅ **Done 2026-09-06.** `/admin/roles` renders the API-driven five-role matrix, is guarded and navigated by
+  `roles:read`, includes loading/error/retry states, and explicitly states that permissions are not editable.
 
 ### P5-5 — Smoke: admin boundaries · S · needs P5-2
 
 - **Do** admin CRUD across one module per phase, self-role-change and self-deactivation blocked, HR_MANAGER
   role-escalation blocked.
 - **Done when** smoke passes with the added checks and the new total is reflected in the README.
+- ✅ **Done 2026-09-06.** Fresh-DB smoke passed **145/145**. Added coverage includes exact ADMIN auth and
+  matrix contracts, lower-role 403s, unrestricted lists, department/payrun/structure CRUD, ADMIN self guards,
+  HR escalation/target guards, and complete five-role account lifecycles with cleanup.
 
 ---
 
@@ -900,7 +913,7 @@ Seeded logins are unchanged: `hr.manager` / `ChangeMe123!` for HR, any employee'
 - **Nothing is committed.** Every change above sits in the working tree (`git status` lists the modified
   files, the one deletion and the new directories). The two sessions map cleanly onto two commits — one for
   P0, one for FE — whenever you want them.
-- **Next steps:** Phase 4 is complete; P5-1 is the next executable build step. The provisional payroll schema must still be reconciled with authoritative Phase 3/4 SQL when it arrives, but this remains a tracked schema-authority risk rather than an incomplete implementation.
+- **Next steps:** Phase 5 is complete; P6-1 is the next executable build step. The provisional payroll schema must still be reconciled with authoritative Phase 3/4 SQL when it arrives, but this remains a tracked schema-authority risk rather than an incomplete implementation.
 
 ## Decisions this plan makes on your behalf
 
@@ -987,3 +1000,20 @@ Phase 4 (`HR_PAYROLL_MANAGER`, P4-1…P4-7) is implemented and was verified with
 - Cleanup: temporary API and ephemeral database processes were stopped after validation.
 
 Known limitations remain unchanged: authoritative Phase 3/4 SQL has not been supplied, so the isolated payroll migration is provisional and must be reconciled later; no browser-only manual click-through was recorded; and the backend dependency audit finding (**5 vulnerabilities: 1 moderate, 4 high**) was not force-fixed without compatibility review.
+
+
+---
+
+# Phase 5 final verification (2026-09-06)
+
+Phase 5 (`ADMIN`, P5-1…P5-5) is implemented and was verified with all existing Phase 1–4 behavior. The final gate produced this evidence:
+
+- Backend generation/static/build checks: `npm run prisma:generate`, `npm run typecheck`, `npm run build`, and a direct strict typecheck of `scripts/smoke.ts` passed.
+- Unit tests: `npm test` passed **82/82 tests in 5 files**, including all 14 permission-catalogue tests.
+- Integration: fresh ephemeral MySQL **8.4.9** applied `20260905000000_init` and `20260905010000_phase_3_payroll`, exposed **21 tables**, completed the representative seed, and completed an immediate second seed without duplicates. The dedicated ADMIN employee/login was repaired or reused idempotently.
+- End-to-end API/RBAC/business-rule smoke: `npm run smoke` passed **145/145 checks**. Phase 5 coverage includes exact 27-permission ADMIN login and `/auth/me`; all-five vs EMPLOYEE-only assignable-role catalogues; an exact five-role permission matrix with four lower-role 403s; unrestricted row and module-list access; representative department, DRAFT payrun, salary-structure, employee and user CRUD; ADMIN self-role/self-deactivation 422 guards; HR create/update escalation and privileged-target 403 guards; and immediate login/deactivation/login-refresh rejection for all five roles.
+- Fixture cleanup: every temporary role employee/user, department, payrun/payslip shell, salary structure, and the existing smoke employee/department/schedule chain was removed successfully.
+- Frontend static checks: `npx next typegen`, `npx tsc --noEmit`, and `npm run lint` passed with zero errors or warnings.
+- Frontend production build: Next.js **16.3.4** passed with `$env:NODE_OPTIONS='--max-old-space-size=4096'; npm run build -- --webpack`; static generation completed **25/25** and emitted `/admin/roles` plus the extended `/users` administration UI.
+
+Known limitations remain unchanged: authoritative Phase 3/4 SQL has not been supplied, so the isolated payroll migration remains provisional; deactivation/password changes revoke refresh tokens but already-issued access JWTs remain valid until expiry; no browser-only manual click-through was recorded; and the previously recorded dependency audit findings were not force-fixed without compatibility review.

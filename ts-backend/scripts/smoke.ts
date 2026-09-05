@@ -276,11 +276,11 @@ async function main() {
   ok('HR_MANAGER cannot read payroll', hrPayrollDenied.status === 403);
   const employeePayrollDenied = await call('GET', '/payslips', emp);
   ok('EMPLOYEE cannot read payroll', employeePayrollDenied.status === 403);
-  const releasedRoles = await call('GET', '/roles', payroll);
-  const roleNames = (releasedRoles.json?.data ?? []).map((role: any) => role.roleName);
+  const assignableRolesForHr = await call('GET', '/roles', hr);
+  const hrAssignableRoleNames = (assignableRolesForHr.json?.data ?? []).map((role: any) => role.roleName);
   ok(
-    'all Phase 4 roles are assignable while ADMIN remains withheld',
-    releasedRoles.status === 200 && roleNames.includes('HR_PAYROLL_USER') && roleNames.includes('HR_PAYROLL_MANAGER') && !roleNames.includes('ADMIN'),
+    'non-ADMIN account managers can assign EMPLOYEE only',
+    assignableRolesForHr.status === 200 && hrAssignableRoleNames.length === 1 && hrAssignableRoleNames[0] === 'EMPLOYEE',
   );
 
   const structures = await call('GET', '/salary-structures?pageSize=20', payroll);
@@ -564,14 +564,320 @@ async function main() {
   const deletedRunRead = await call('GET', `/payruns/${draftToDeleteId}`, payrollManager);
   const deletedSlipsRead = await call('GET', `/payslips?payrunId=${draftToDeleteId}`, payrollManager);
   ok('payroll manager deletes DRAFT payrun and remaining payslips cascade', managerPayrunDelete.status === 204 && deletedRunRead.status === 404 && deletedSlipsRead.json?.meta?.total === 0);
+
+  // ---- Phase 5 ADMIN ----
+  const { ASSIGNABLE_ROLE_NAMES, PERMISSIONS, permissionsFor } = await import('../src/auth/permissions.js');
+  const phase5Stamp = Date.now();
+  const sameStringMembers = (actual: unknown, expected: readonly string[]) => {
+    if (!Array.isArray(actual) || actual.length !== expected.length || new Set(actual).size !== actual.length) return false;
+    const values = new Set(actual);
+    return expected.every((value) => values.has(value));
+  };
+  const sameOrderedStrings = (actual: unknown, expected: readonly string[]) =>
+    Array.isArray(actual) && actual.length === expected.length && actual.every((value, index) => value === expected[index]);
+
+  const adminLogin = await call('POST', '/auth/login', undefined, {
+    username: process.env.SEED_ADMIN_USERNAME ?? 'admin',
+    password: process.env.SEED_ADMIN_PASSWORD ?? 'Admin123!',
+  });
+  const admin: string = adminLogin.json?.accessToken;
+  const adminUserId: number = adminLogin.json?.user?.userId;
+  ok(
+    'ADMIN login exposes the exact 27-permission catalogue',
+    adminLogin.status === 200 &&
+      adminLogin.json?.user?.role === 'ADMIN' &&
+      typeof adminLogin.json?.refreshToken === 'string' &&
+      typeof admin === 'string' &&
+      PERMISSIONS.length === 27 &&
+      sameStringMembers(adminLogin.json?.user?.permissions, PERMISSIONS),
+  );
+
+  const adminMe = await call('GET', '/auth/me', admin);
+  ok(
+    'ADMIN /auth/me exposes the exact full catalogue',
+    adminMe.status === 200 && adminMe.json?.role === 'ADMIN' && sameStringMembers(adminMe.json?.permissions, PERMISSIONS),
+  );
+
+  const adminRoles = await call('GET', '/roles', admin);
+  const adminRoleNames = (adminRoles.json?.data ?? []).map((role: any) => role.roleName);
+  ok(
+    'ADMIN can assign all five roles',
+    adminRoles.status === 200 && sameStringMembers(adminRoleNames, ASSIGNABLE_ROLE_NAMES),
+    `roles=${adminRoleNames.join(',')}`,
+  );
+
+  const matrix = await call('GET', '/roles/permissions', admin);
+  const matrixRows: any[] = Array.isArray(matrix.json?.roles) ? matrix.json.roles : [];
+  const matrixExact =
+    matrix.status === 200 &&
+    sameOrderedStrings(matrix.json?.permissions, PERMISSIONS) &&
+    sameStringMembers(matrixRows.map((row) => row.roleName), ASSIGNABLE_ROLE_NAMES) &&
+    ASSIGNABLE_ROLE_NAMES.every((roleName) => {
+      const rows = matrixRows.filter((row) => row.roleName === roleName);
+      return rows.length === 1 && sameOrderedStrings(rows[0]?.permissions, permissionsFor(roleName));
+    });
+  ok('ADMIN permission matrix exactly matches the code catalogue and all five role sets', matrixExact);
+
+  for (const [roleName, token] of [
+    ['EMPLOYEE', emp],
+    ['HR_MANAGER', hr],
+    ['HR_PAYROLL_USER', payroll],
+    ['HR_PAYROLL_MANAGER', payrollManager],
+  ] as const) {
+    const deniedMatrix = await call('GET', '/roles/permissions', token);
+    ok(
+      `${roleName} cannot read the permission matrix`,
+      deniedMatrix.status === 403 && deniedMatrix.json?.error?.code === 'FORBIDDEN',
+    );
+  }
+
+  const currentHrScope = await call('GET', '/employees?pageSize=50', hr);
+  const adminScope = await call('GET', '/employees?pageSize=50', admin);
+  ok(
+    'ADMIN has unrestricted employee row scope',
+    adminScope.status === 200 &&
+      currentHrScope.status === 200 &&
+      adminScope.json?.meta?.total === currentHrScope.json?.meta?.total &&
+      adminScope.json?.meta?.total > 1 &&
+      adminScope.json?.data?.some((employee: any) => employee.employeeId === empId) &&
+      adminScope.json?.data?.some((employee: any) => employee.employeeId === otherId),
+    `admin=${adminScope.json?.meta?.total}, hr=${currentHrScope.json?.meta?.total}`,
+  );
+  const adminOtherEmployee = await call('GET', `/employees/${otherId}`, admin);
+  ok('ADMIN can read another employee directly', adminOtherEmployee.status === 200 && adminOtherEmployee.json?.employeeId === otherId);
+
+  const adminListPaths = [
+    '/users?pageSize=1',
+    '/departments?pageSize=1',
+    '/leave-types?pageSize=1',
+    '/work-schedules?pageSize=1',
+    '/employees?pageSize=1',
+    '/contracts?pageSize=1',
+    `/attendance/records?from=${plusDays(-7)}&to=${today}&pageSize=1`,
+    '/leave-balances?pageSize=1',
+    '/time-off/requests?pageSize=1',
+    '/salary-structures?pageSize=1',
+    '/salary-rules?pageSize=1',
+    '/payruns?pageSize=1',
+    '/payslips?pageSize=1',
+  ];
+  const adminListResults: Array<{ path: string; response: Awaited<ReturnType<typeof call>> }> = [];
+  for (const path of adminListPaths) {
+    adminListResults.push({ path, response: await call('GET', path, admin) });
+  }
+  ok(
+    'ADMIN reaches every released module list',
+    adminListResults.every(({ response }) => response.status === 200 && Array.isArray(response.json?.data) && response.json?.meta),
+    adminListResults.map(({ path, response }) => `${path}:${response.status}`).join(', '),
+  );
+
+  // Representative Phase 1/2 ADMIN CRUD: unreferenced department.
+  const adminDepartment = await call('POST', '/departments', admin, {
+    departmentName: `Admin Smoke Dept ${phase5Stamp}`,
+    description: 'Temporary Phase 5 ADMIN CRUD fixture',
+  });
+  const adminDepartmentId = adminDepartment.json?.departmentId;
+  ok('ADMIN creates a department', adminDepartment.status === 201 && adminDepartmentId > 0);
+  const adminDepartmentRead = await call('GET', `/departments/${adminDepartmentId}`, admin);
+  ok('ADMIN reads the department', adminDepartmentRead.status === 200 && adminDepartmentRead.json?.departmentId === adminDepartmentId);
+  const adminDepartmentUpdate = await call('PATCH', `/departments/${adminDepartmentId}`, admin, { description: 'Updated by ADMIN smoke' });
+  ok('ADMIN updates the department', adminDepartmentUpdate.status === 200 && adminDepartmentUpdate.json?.description === 'Updated by ADMIN smoke');
+  const adminDepartmentDelete = await call('DELETE', `/departments/${adminDepartmentId}`, admin);
+  const adminDepartmentAfterDelete = await call('GET', `/departments/${adminDepartmentId}`, admin);
+  ok('ADMIN deletes the unreferenced department', adminDepartmentDelete.status === 204 && adminDepartmentAfterDelete.status === 404);
+
+  // Representative Phase 3 ADMIN CRUD: a DRAFT payrun against the still-live disposable structure.
+  const adminDraft = await call('POST', '/payruns', admin, {
+    name: `Admin Smoke Run ${phase5Stamp}`,
+    structureId: phase4StructureId,
+    periodStart: deleteFrom,
+    periodEnd: deleteTo,
+    employeeIds: deleteEmployees.map((employee: any) => employee.employeeId),
+  });
+  const adminDraftId = adminDraft.json?.payrunId;
+  const adminDraftSlips = await call('GET', `/payslips?payrunId=${adminDraftId}&pageSize=20`, admin);
+  ok(
+    'ADMIN creates a DRAFT payrun',
+    adminDraft.status === 201 && adminDraft.json?.status === 'DRAFT' && adminDraftSlips.json?.meta?.total === deleteEmployees.length,
+  );
+  const adminDraftRead = await call('GET', `/payruns/${adminDraftId}`, admin);
+  ok('ADMIN reads the DRAFT payrun', adminDraftRead.status === 200 && adminDraftRead.json?.payrunId === adminDraftId && adminDraftRead.json?.status === 'DRAFT');
+  const adminDraftDelete = await call('DELETE', `/payruns/${adminDraftId}`, admin);
+  const adminDraftAfterDelete = await call('GET', `/payruns/${adminDraftId}`, admin);
+  const adminDraftSlipsAfterDelete = await call('GET', `/payslips?payrunId=${adminDraftId}`, admin);
+  ok(
+    'ADMIN deletes the DRAFT payrun and its payslip shells',
+    adminDraftDelete.status === 204 && adminDraftAfterDelete.status === 404 && adminDraftSlipsAfterDelete.json?.meta?.total === 0,
+  );
+
   const deletedStructure = await call('DELETE', `/salary-structures/${phase4StructureId}`, payrollManager);
   ok('disposable unreferenced structure deletes after draft cleanup', deletedStructure.status === 204);
 
+  // Representative Phase 4 ADMIN CRUD: unreferenced salary structure.
+  const adminStructure = await call('POST', '/salary-structures', admin, {
+    name: `Admin Smoke Structure ${phase5Stamp}`,
+    description: 'Temporary Phase 5 ADMIN CRUD fixture',
+    currency: regular?.currency ?? 'INR',
+    isActive: true,
+  });
+  const adminStructureId = adminStructure.json?.salaryStructureId;
+  ok('ADMIN creates a salary structure', adminStructure.status === 201 && adminStructureId > 0);
+  const adminStructureRead = await call('GET', `/salary-structures/${adminStructureId}`, admin);
+  ok('ADMIN reads the salary structure', adminStructureRead.status === 200 && adminStructureRead.json?.salaryStructureId === adminStructureId);
+  const adminStructureUpdate = await call('PATCH', `/salary-structures/${adminStructureId}`, admin, { description: 'Updated by ADMIN smoke' });
+  ok('ADMIN updates the salary structure', adminStructureUpdate.status === 200 && adminStructureUpdate.json?.description === 'Updated by ADMIN smoke');
+  const adminStructureDelete = await call('DELETE', `/salary-structures/${adminStructureId}`, admin);
+  const adminStructureAfterDelete = await call('GET', `/salary-structures/${adminStructureId}`, admin);
+  ok('ADMIN deletes the unreferenced salary structure', adminStructureDelete.status === 204 && adminStructureAfterDelete.status === 404);
+
   // ---- users ----
-  const user = await call('POST', '/users', hr, { employeeId: newId, username: `smoke${Date.now()}`, password: 'Password123!', role: 'EMPLOYEE' });
+  const privilegedRoles = ASSIGNABLE_ROLE_NAMES.filter((roleName) => roleName !== 'EMPLOYEE');
+  const hrCreateEscalations: Array<Awaited<ReturnType<typeof call>>> = [];
+  for (const roleName of privilegedRoles) {
+    hrCreateEscalations.push(await call('POST', '/users', hr, {
+      employeeId: newId,
+      username: `denied.create.${roleName.toLowerCase()}.${phase5Stamp}`,
+      password: 'Password123!',
+      role: roleName,
+      isActive: true,
+    }));
+  }
+  ok(
+    'HR cannot create any privileged-role account',
+    hrCreateEscalations.every((response) => response.status === 403 && response.json?.error?.code === 'FORBIDDEN'),
+    hrCreateEscalations.map((response, index) => `${privilegedRoles[index]}:${response.status}`).join(', '),
+  );
+
+  const user = await call('POST', '/users', hr, {
+    employeeId: newId,
+    username: `smoke${phase5Stamp}`,
+    password: 'Password123!',
+    role: 'EMPLOYEE',
+    isActive: true,
+  });
   ok('HR creates user', user.status === 201 && user.json?.role === 'EMPLOYEE');
+
+  const hrUpdateEscalations: Array<Awaited<ReturnType<typeof call>>> = [];
+  for (const roleName of privilegedRoles) {
+    hrUpdateEscalations.push(await call('PATCH', `/users/${user.json?.userId}`, hr, { role: roleName }));
+  }
+  ok(
+    'HR cannot elevate an EMPLOYEE account to any privileged role',
+    hrUpdateEscalations.every((response) => response.status === 403 && response.json?.error?.code === 'FORBIDDEN'),
+    hrUpdateEscalations.map((response, index) => `${privilegedRoles[index]}:${response.status}`).join(', '),
+  );
+
+  const hrAdminPasswordReset = await call('PATCH', `/users/${adminUserId}`, hr, { password: 'OtherPassword123!' });
+  const hrAdminDeactivation = await call('PATCH', `/users/${adminUserId}`, hr, { isActive: false });
+  ok(
+    'HR cannot reset or deactivate a privileged account',
+    hrAdminPasswordReset.status === 403 &&
+      hrAdminPasswordReset.json?.error?.code === 'FORBIDDEN' &&
+      hrAdminDeactivation.status === 403 &&
+      hrAdminDeactivation.json?.error?.code === 'FORBIDDEN',
+    `password=${hrAdminPasswordReset.status}, deactivate=${hrAdminDeactivation.status}`,
+  );
+
+  const adminSelfRole = await call('PATCH', `/users/${adminUserId}`, admin, { role: 'EMPLOYEE' });
+  ok(
+    'ADMIN cannot change own role',
+    adminSelfRole.status === 422 && adminSelfRole.json?.error?.code === 'BUSINESS_RULE_VIOLATION',
+  );
+  const adminSelfDeactivation = await call('PATCH', `/users/${adminUserId}`, admin, { isActive: false });
+  ok(
+    'ADMIN cannot deactivate own account',
+    adminSelfDeactivation.status === 422 && adminSelfDeactivation.json?.error?.code === 'BUSINESS_RULE_VIOLATION',
+  );
+
   const selfRole = await call('PATCH', `/users/${hrLogin.json?.user?.userId}`, hr, { role: 'EMPLOYEE' });
   ok('HR cannot change own role', selfRole.status === 422);
+
+  // ADMIN creates, reads, updates, activates, deactivates and cleans up one user of every role.
+  for (const roleName of ASSIGNABLE_ROLE_NAMES) {
+    const suffix = roleName.toLowerCase();
+    const username = `p5.${suffix}.${phase5Stamp}`;
+    let fixtureEmployeeId: number | undefined;
+    let fixtureUserId: number | undefined;
+    let fixturePassed = true;
+    const evidence: string[] = [];
+
+    try {
+      const fixtureEmployee = await call('POST', '/employees', admin, {
+        firstName: 'P5',
+        lastName: roleName,
+        email: `p5.${suffix}.${phase5Stamp}@smoke.local`,
+        hireDate: today,
+        jobTitle: 'Temporary P5 role user',
+      });
+      fixtureEmployeeId = fixtureEmployee.json?.employeeId;
+      evidence.push(`employee-create=${fixtureEmployee.status}`);
+      if (fixtureEmployee.status !== 201 || !Number.isInteger(fixtureEmployeeId)) throw new Error('employee creation failed');
+
+      const fixtureEmployeeRead = await call('GET', `/employees/${fixtureEmployeeId}`, admin);
+      const fixtureEmployeeUpdate = await call('PATCH', `/employees/${fixtureEmployeeId}`, admin, { jobTitle: `Temporary ${roleName}` });
+      evidence.push(`employee-read=${fixtureEmployeeRead.status}`, `employee-update=${fixtureEmployeeUpdate.status}`);
+
+      const fixtureUser = await call('POST', '/users', admin, {
+        employeeId: fixtureEmployeeId,
+        username,
+        password: 'Password123!',
+        role: roleName,
+        isActive: true,
+      });
+      fixtureUserId = fixtureUser.json?.userId;
+      evidence.push(`user-create=${fixtureUser.status}`);
+      if (fixtureUser.status !== 201 || !Number.isInteger(fixtureUserId)) throw new Error('user creation failed');
+
+      const fixtureUserRead = await call('GET', `/users/${fixtureUserId}`, admin);
+      const fixtureLogin = await call('POST', '/auth/login', undefined, { username, password: 'Password123!' });
+      evidence.push(`user-read=${fixtureUserRead.status}`, `login=${fixtureLogin.status}`);
+      if (fixtureLogin.status !== 200 || typeof fixtureLogin.json?.refreshToken !== 'string') throw new Error('initial login failed');
+
+      const fixtureDeactivation = await call('PATCH', `/users/${fixtureUserId}`, admin, { isActive: false });
+      const blockedLogin = await call('POST', '/auth/login', undefined, { username, password: 'Password123!' });
+      const blockedRefresh = await call('POST', '/auth/refresh', undefined, { refreshToken: fixtureLogin.json.refreshToken });
+      evidence.push(
+        `deactivate=${fixtureDeactivation.status}`,
+        `blocked-login=${blockedLogin.status}`,
+        `blocked-refresh=${blockedRefresh.status}`,
+      );
+
+      fixturePassed =
+        fixtureEmployeeRead.status === 200 &&
+        fixtureEmployeeRead.json?.employeeId === fixtureEmployeeId &&
+        fixtureEmployeeUpdate.status === 200 &&
+        fixtureEmployeeUpdate.json?.jobTitle === `Temporary ${roleName}` &&
+        fixtureUser.json?.role === roleName &&
+        fixtureUser.json?.employee?.employeeId === fixtureEmployeeId &&
+        fixtureUser.json?.isActive === true &&
+        fixtureUserRead.status === 200 &&
+        fixtureUserRead.json?.role === roleName &&
+        fixtureLogin.json?.user?.role === roleName &&
+        sameStringMembers(fixtureLogin.json?.user?.permissions, permissionsFor(roleName)) &&
+        fixtureDeactivation.status === 200 &&
+        fixtureDeactivation.json?.isActive === false &&
+        blockedLogin.status === 401 &&
+        blockedLogin.json?.error?.code === 'UNAUTHORIZED' &&
+        blockedRefresh.status === 401 &&
+        blockedRefresh.json?.error?.code === 'UNAUTHORIZED';
+    } catch (error) {
+      fixturePassed = false;
+      evidence.push(error instanceof Error ? error.message : String(error));
+    } finally {
+      if (fixtureEmployeeId !== undefined) {
+        const fixtureCleanup = await call('DELETE', `/employees/${fixtureEmployeeId}`, admin);
+        evidence.push(`cleanup=${fixtureCleanup.status}`);
+        fixturePassed = fixturePassed && fixtureCleanup.status === 204;
+        if (fixtureUserId !== undefined) {
+          const userAfterCleanup = await call('GET', `/users/${fixtureUserId}`, admin);
+          evidence.push(`user-after-cleanup=${userAfterCleanup.status}`);
+          fixturePassed = fixturePassed && userAfterCleanup.status === 404;
+        }
+      }
+    }
+
+    ok(`ADMIN user lifecycle for ${roleName}`, fixturePassed, evidence.join(', '));
+  }
 
   // ---- cleanup ----
   const del = await call('DELETE', `/employees/${newId}`, hr);

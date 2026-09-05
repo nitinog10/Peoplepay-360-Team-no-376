@@ -49,6 +49,8 @@ const envSchema = z
     SEED_EMPLOYEE_PASSWORD: z.string().min(8).default('Employee123!'),
     SEED_PAYROLL_PASSWORD: z.string().min(8).default('Payroll123!'),
     SEED_PAYROLL_MANAGER_PASSWORD: z.string().min(8).default('PayrollManager123!'),
+    SEED_ADMIN_USERNAME: z.string().trim().min(3).max(50).default('admin'),
+    SEED_ADMIN_PASSWORD: z.string().min(8).default('Admin123!'),
   })
   .superRefine((value, ctx) => {
     if ((value.SMTP_USER === undefined) !== (value.SMTP_PASS === undefined)) {

@@ -1,7 +1,7 @@
 # PeoplePay360 API (ts-backend)
 
 Express 5 + TypeScript REST API backed by MySQL 8 through Prisma 6.19.3 (pinned — do not upgrade mid-hackathon).
-Phase 1–4 cover **EMPLOYEE**, **HR_MANAGER**, **HR_PAYROLL_USER**, and **HR_PAYROLL_MANAGER**: HR operations, attendance, time off, payroll processing, salary configuration, and payroll reporting.
+Phase 1–5 cover **EMPLOYEE**, **HR_MANAGER**, **HR_PAYROLL_USER**, **HR_PAYROLL_MANAGER**, and **ADMIN**: HR operations, attendance, time off, payroll processing/configuration/reporting, and system administration.
 
 ## Setup
 
@@ -31,6 +31,7 @@ Schema changes: edit `prisma/schema.prisma`, then `npm run prisma:migrate -- --n
 | `hr.manager` (`SEED_HR_USERNAME`) | `SEED_HR_PASSWORD` | HR_MANAGER |
 | `vikram.singh@oxp.com` | `SEED_PAYROLL_PASSWORD` | HR_PAYROLL_USER |
 | `maya.shah@oxp.com` | `SEED_PAYROLL_MANAGER_PASSWORD` | HR_PAYROLL_MANAGER |
+| `admin` (`SEED_ADMIN_USERNAME`) | `SEED_ADMIN_PASSWORD` | ADMIN |
 | any other employee's work email, e.g. `aarav.mehta@oxp.com` | `SEED_EMPLOYEE_PASSWORD` | EMPLOYEE |
 
 ## Configuration (`.env`)
@@ -45,6 +46,7 @@ Schema changes: edit `prisma/schema.prisma`, then `npm run prisma:migrate -- --n
 | `APP_TIMEZONE` | IANA zone used to decide which day a punch belongs to and whether it is late |
 | `LATE_GRACE_MINUTES` | Grace after scheduled start before a clock-in counts as late |
 | `SEED_HR_PASSWORD`, `SEED_EMPLOYEE_PASSWORD`, `SEED_PAYROLL_PASSWORD`, `SEED_PAYROLL_MANAGER_PASSWORD` | Passwords for the seeded role-specific demo accounts |
+| `SEED_ADMIN_USERNAME`, `SEED_ADMIN_PASSWORD` | Credentials for the idempotently seeded ADMIN account |
 
 ## Authentication
 
@@ -52,15 +54,14 @@ Schema changes: edit `prisma/schema.prisma`, then `npm run prisma:migrate -- --n
 access token (send as `Authorization: Bearer …`) and a rotating refresh token (also set as an httpOnly
 cookie scoped to `/api/v1/auth`). `POST /auth/refresh`, `POST /auth/logout`, `GET /auth/me`.
 
-Permissions are defined in `src/auth/permissions.ts`. EMPLOYEE reads are scoped to the caller's
-own employee record inside the services.
+Permissions are defined in `src/auth/permissions.ts`. EMPLOYEE reads are scoped to the caller's own employee record; ADMIN receives all **27** code-defined permissions and unrestricted row scope. Non-admin holders of `users:manage` may create or mutate EMPLOYEE-role accounts only, while ADMIN can assign and manage every released role.
 
 ## Endpoints (`/api/v1`)
 
 | Area | Routes |
 |---|---|
 | Health | `GET /health` |
-| Users (HR) | `GET/POST /users`, `GET/PATCH /users/:id`, `GET /roles` |
+| Users & roles | `GET/POST /users`, `GET/PATCH /users/:id`, `GET /roles` (actor-assignable roles), `GET /roles/permissions` (ADMIN read-only matrix) |
 | Departments | `GET/POST /departments`, `GET/PATCH/DELETE /departments/:id` |
 | Leave types | `GET/POST /leave-types`, `GET/PATCH/DELETE /leave-types/:id` |
 | Work schedules | `GET/POST /work-schedules`, `GET/PATCH/DELETE /work-schedules/:id` |
@@ -93,6 +94,7 @@ and 422 business-rule violations.
 | Salary config conflicts, method operands, reference-safe delete/deactivate and atomic reorder | `modules/salary-structures`, `modules/salary-rules` |
 | Payroll lifecycle: DRAFT hard-delete, COMPUTED/VALIDATED cancel, PAID immutability | `modules/payruns`, `modules/payslips` |
 | Uniform live payroll/attendance/time-off dashboard aggregation | `modules/dashboard/service.ts` |
+| ADMIN full role management; non-admin account managers limited to EMPLOYEE accounts | `modules/users/service.ts` |
 
 ## Scripts
 
@@ -103,4 +105,4 @@ and 422 business-rule violations.
 | `npm run prisma:generate` / `prisma:migrate` / `prisma:deploy` / `prisma:seed` | `prisma generate` / `migrate dev` / `migrate deploy` / `db seed` |
 | `npm test` / `npm run test:watch` | vitest — unit tests for the pure rules (no database) |
 | `npm run db:ephemeral` | Throwaway MySQL: migrate, verify tables, seed and stay up (`EPHEMERAL_PORT` pins the port) |
-| `npm run smoke` | End-to-end Phase 1–4 smoke test against a seeded API (`API_URL` defaults to `http://localhost:8000/api/v1`); current verified total: **113/113** |
+| `npm run smoke` | End-to-end Phase 1–5 smoke test against a seeded API (`API_URL` defaults to `http://localhost:8000/api/v1`); current verified total: **145/145** |

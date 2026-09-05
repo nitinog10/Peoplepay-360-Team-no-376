@@ -372,6 +372,49 @@ async function ensurePayrollManagerLogin() {
   log(`payroll manager login ready: ${employee.email} (HR_PAYROLL_MANAGER)`);
 }
 
+async function ensureAdminLogin() {
+  const department = await prisma.department.findUnique({ where: { departmentName: 'Human Resources' } });
+  const employee = await prisma.employee.upsert({
+    where: { email: 'system.admin@peoplepay.local' },
+    update: {
+      firstName: 'System',
+      lastName: 'Administrator',
+      jobTitle: 'System Administrator',
+      status: 'ACTIVE',
+      terminationDate: null,
+      ...(department ? { departmentId: department.departmentId } : {}),
+    },
+    create: {
+      firstName: 'System',
+      lastName: 'Administrator',
+      email: 'system.admin@peoplepay.local',
+      hireDate: todayLocal(),
+      jobTitle: 'System Administrator',
+      departmentId: department?.departmentId,
+    },
+    include: { user: true },
+  });
+
+  const role = await prisma.role.findUniqueOrThrow({ where: { roleName: 'ADMIN' } });
+  const passwordHash = await hashPassword(env.SEED_ADMIN_PASSWORD);
+  if (employee.user) {
+    await prisma.user.update({
+      where: { userId: employee.user.userId },
+      data: { username: env.SEED_ADMIN_USERNAME, passwordHash, roleId: role.roleId, isActive: true },
+    });
+  } else {
+    await prisma.user.create({
+      data: {
+        employeeId: employee.employeeId,
+        username: env.SEED_ADMIN_USERNAME,
+        passwordHash,
+        roleId: role.roleId,
+      },
+    });
+  }
+  log(`admin login ready: ${env.SEED_ADMIN_USERNAME} (ADMIN)`);
+}
+
 async function seedPayrollPeople() {
   const employees = await prisma.employee.findMany({
     where: {
@@ -458,6 +501,7 @@ async function main() {
   await seedTransactional();
   await ensurePayrollLogin();
   await ensurePayrollManagerLogin();
+  await ensureAdminLogin();
   await seedPayrollPeople();
   await seedPayrollHistory();
   log('done');

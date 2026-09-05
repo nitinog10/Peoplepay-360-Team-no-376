@@ -1,6 +1,7 @@
 import type { Prisma } from '../../generated/prisma/client';
-import { ASSIGNABLE_ROLE_NAMES, type AssignableRoleName } from '../../auth/permissions';
-import { BusinessRuleError, ConflictError, NotFoundError } from '../../lib/errors';
+import type { RoleName } from '../../generated/prisma/enums';
+import { ASSIGNABLE_ROLE_NAMES, PERMISSIONS, permissionsFor, type AssignableRoleName } from '../../auth/permissions';
+import { BusinessRuleError, ConflictError, ForbiddenError, NotFoundError } from '../../lib/errors';
 import { listResponse, toOrderBy, toSkipTake } from '../../lib/http';
 import { prisma } from '../../lib/prisma';
 import { hashPassword, type Actor } from '../../lib/security';
@@ -24,11 +25,31 @@ async function roleIdFor(role: AssignableRoleName): Promise<number> {
   return row.roleId;
 }
 
-export async function listRoles() {
+function assertCanAssignRole(actor: Actor, role: AssignableRoleName): void {
+  if (actor.role !== 'ADMIN' && role !== 'EMPLOYEE') {
+    throw new ForbiddenError('Only ADMIN can assign privileged roles');
+  }
+}
+
+function assertCanManageTarget(actor: Actor, targetUserId: number, targetRole: RoleName): void {
+  if (actor.role !== 'ADMIN' && actor.userId !== targetUserId && targetRole !== 'EMPLOYEE') {
+    throw new ForbiddenError('Only ADMIN can manage privileged user accounts');
+  }
+}
+
+export async function listRoles(actor: Actor) {
+  const roleNames: AssignableRoleName[] = actor.role === 'ADMIN' ? [...ASSIGNABLE_ROLE_NAMES] : ['EMPLOYEE'];
   return prisma.role.findMany({
-    where: { roleName: { in: [...ASSIGNABLE_ROLE_NAMES] } },
+    where: { roleName: { in: roleNames } },
     orderBy: { roleId: 'asc' },
   });
+}
+
+export function permissionMatrix() {
+  return {
+    permissions: [...PERMISSIONS],
+    roles: ASSIGNABLE_ROLE_NAMES.map((roleName) => ({ roleName, permissions: permissionsFor(roleName) })),
+  };
 }
 
 export async function list(query: ListUsersQuery) {
@@ -64,7 +85,8 @@ export async function get(userId: number) {
   return present(user);
 }
 
-export async function create(input: CreateUserInput) {
+export async function create(actor: Actor, input: CreateUserInput) {
+  assertCanAssignRole(actor, input.role);
   const employee = await prisma.employee.findUnique({
     where: { employeeId: input.employeeId },
     include: { user: { select: { userId: true } } },
@@ -79,6 +101,7 @@ export async function create(input: CreateUserInput) {
       username: input.username,
       passwordHash: await hashPassword(input.password),
       roleId: await roleIdFor(input.role),
+      isActive: input.isActive,
     },
     include,
   });
@@ -86,13 +109,19 @@ export async function create(input: CreateUserInput) {
 }
 
 export async function update(actor: Actor, userId: number, input: UpdateUserInput) {
-  const existing = await prisma.user.findUnique({ where: { userId } });
+  const existing = await prisma.user.findUnique({
+    where: { userId },
+    include: { role: { select: { roleName: true } } },
+  });
   if (!existing) throw new NotFoundError('User', userId);
 
   if (userId === actor.userId) {
     if (input.role !== undefined) throw new BusinessRuleError('You cannot change your own role');
     if (input.isActive === false) throw new BusinessRuleError('You cannot deactivate your own account');
   }
+
+  assertCanManageTarget(actor, userId, existing.role.roleName);
+  if (input.role !== undefined) assertCanAssignRole(actor, input.role);
 
   const data: Prisma.UserUpdateInput = {};
   if (input.username !== undefined) data.username = input.username;

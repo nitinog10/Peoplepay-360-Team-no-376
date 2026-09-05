@@ -1,7 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 
 import { http } from "./client";
-import type { ListQuery, ManagedUser, Paginated, Role, RoleName } from "./types";
+import type { ListQuery, ManagedUser, Paginated, Role, RoleName, RolePermissionMatrix } from "./types";
 
 export type ListUsersQuery = ListQuery & {
   role?: RoleName;
@@ -13,6 +13,7 @@ export interface CreateUserBody {
   username: string;
   password: string;
   role: RoleName;
+  isActive: boolean;
 }
 
 export interface UpdateUserBody {
@@ -30,6 +31,8 @@ export const userKeys = {
 
 export const roleKeys = {
   all: ["roles"] as const,
+  assignable: () => ["roles", "assignable"] as const,
+  permissions: () => ["roles", "permissions"] as const,
 };
 
 export const users = {
@@ -47,8 +50,15 @@ export const users = {
 
   roles: () =>
     queryOptions({
-      queryKey: roleKeys.all,
+      queryKey: roleKeys.assignable(),
       queryFn: ({ signal }) => http.get<{ data: Role[] }>("/roles", { signal }),
+      staleTime: Infinity,
+    }),
+
+  rolePermissions: () =>
+    queryOptions({
+      queryKey: roleKeys.permissions(),
+      queryFn: ({ signal }) => http.get<RolePermissionMatrix>("/roles/permissions", { signal }),
       staleTime: Infinity,
     }),
 

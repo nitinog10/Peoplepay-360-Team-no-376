@@ -9,6 +9,7 @@ import {
   LayoutDashboardIcon,
   PlaneIcon,
   TagsIcon,
+  ShieldCheckIcon,
   UserCogIcon,
   UserRoundIcon,
   UsersIcon,
@@ -59,6 +60,7 @@ export const NAV: NavEntry[] = [
       // The roster itself is HR's; an employee reads their own record at /employees/me.
       { label: "Employees", href: "/employees", icon: UsersIcon, permission: "employees:write" },
       { label: "Users", href: "/users", icon: UserCogIcon, permission: "users:manage" },
+      { label: "Roles & Permissions", href: "/admin/roles", icon: ShieldCheckIcon, permission: "roles:read" },
       { label: "Contracts", href: "/contracts", icon: FileTextIcon, permission: "contracts:read" },
       {
         label: "Departments",

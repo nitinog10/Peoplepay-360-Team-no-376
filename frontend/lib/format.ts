@@ -1,5 +1,19 @@
 import { format, parseISO } from "date-fns";
 
+import type { RoleName } from "@/lib/api/types";
+
+const ROLE_LABELS: Record<RoleName, string> = {
+  EMPLOYEE: "Employee",
+  HR_MANAGER: "HR Manager",
+  HR_PAYROLL_USER: "HR Payroll User",
+  HR_PAYROLL_MANAGER: "HR Payroll Manager",
+  ADMIN: "Admin",
+};
+
+export function formatRoleName(role: RoleName): string {
+  return ROLE_LABELS[role];
+}
+
 /**
  * Display formatting shared by the widget, the tables and the forms.
  *

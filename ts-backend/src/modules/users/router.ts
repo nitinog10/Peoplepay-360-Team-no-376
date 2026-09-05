@@ -13,7 +13,7 @@ usersRouter.get('/', async (req, res) => {
 });
 
 usersRouter.post('/', async (req, res) => {
-  res.status(201).json(await service.create(createUserSchema.parse(req.body)));
+  res.status(201).json(await service.create(getActor(req), createUserSchema.parse(req.body)));
 });
 
 usersRouter.get('/:id', async (req, res) => {
@@ -25,7 +25,10 @@ usersRouter.patch('/:id', async (req, res) => {
 });
 
 export const rolesRouter = Router();
-rolesRouter.use(authenticate, authorize('users:manage'));
-rolesRouter.get('/', async (_req, res) => {
-  res.json({ data: await service.listRoles() });
+rolesRouter.use(authenticate);
+rolesRouter.get('/permissions', authorize('roles:read'), async (_req, res) => {
+  res.json(service.permissionMatrix());
+});
+rolesRouter.get('/', authorize('users:manage'), async (req, res) => {
+  res.json({ data: await service.listRoles(getActor(req)) });
 });

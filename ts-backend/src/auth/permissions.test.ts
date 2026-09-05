@@ -20,30 +20,44 @@ import {
 const hr: Actor = { userId: 1, employeeId: 1, role: 'HR_MANAGER', username: 'hr.manager' };
 const payroll: Actor = { userId: 3, employeeId: 3, role: 'HR_PAYROLL_USER', username: 'payroll.user' };
 const payrollManager: Actor = { userId: 4, employeeId: 4, role: 'HR_PAYROLL_MANAGER', username: 'payroll.manager' };
+const admin: Actor = { userId: 5, employeeId: 5, role: 'ADMIN', username: 'admin' };
 const employee: Actor = { userId: 2, employeeId: 7, role: 'EMPLOYEE', username: 'aarav.mehta@oxp.com' };
 
 const PAYROLL_USER_PERMISSIONS = ['payroll:read', 'payruns:write', 'payslips:write', 'salary-config:read'] as const;
 const PAYROLL_MANAGER_PERMISSIONS = ['salary-config:write', 'payruns:delete', 'payslips:delete'] as const;
+const ADMIN_ONLY_PERMISSIONS = ['roles:read'] as const;
 
 describe('role catalogue', () => {
-  it('keeps HR_MANAGER on the explicit HR permission set without payroll access', () => {
-    expect(permissionsFor('HR_MANAGER')).toHaveLength(PERMISSIONS.length - PAYROLL_USER_PERMISSIONS.length - PAYROLL_MANAGER_PERMISSIONS.length);
-    for (const permission of [...PAYROLL_USER_PERMISSIONS, ...PAYROLL_MANAGER_PERMISSIONS]) expect(hasPermission('HR_MANAGER', permission)).toBe(false);
+  it('keeps HR_MANAGER on the explicit HR permission set without payroll or admin access', () => {
+    expect(permissionsFor('HR_MANAGER')).toHaveLength(
+      PERMISSIONS.length - PAYROLL_USER_PERMISSIONS.length - PAYROLL_MANAGER_PERMISSIONS.length - ADMIN_ONLY_PERMISSIONS.length,
+    );
+    for (const permission of [...PAYROLL_USER_PERMISSIONS, ...PAYROLL_MANAGER_PERMISSIONS, ...ADMIN_ONLY_PERMISSIONS]) {
+      expect(hasPermission('HR_MANAGER', permission)).toBe(false);
+    }
   });
 
-  it('makes HR_PAYROLL_USER the HR_MANAGER superset without manager-only writes', () => {
-    expect(permissionsFor('HR_PAYROLL_USER')).toHaveLength(PERMISSIONS.length - PAYROLL_MANAGER_PERMISSIONS.length);
+  it('makes HR_PAYROLL_USER the HR_MANAGER superset without manager-only or admin-only access', () => {
+    expect(permissionsFor('HR_PAYROLL_USER')).toHaveLength(
+      PERMISSIONS.length - PAYROLL_MANAGER_PERMISSIONS.length - ADMIN_ONLY_PERMISSIONS.length,
+    );
     for (const permission of PAYROLL_USER_PERMISSIONS) expect(hasPermission('HR_PAYROLL_USER', permission)).toBe(true);
-    for (const permission of PAYROLL_MANAGER_PERMISSIONS) expect(hasPermission('HR_PAYROLL_USER', permission)).toBe(false);
+    for (const permission of [...PAYROLL_MANAGER_PERMISSIONS, ...ADMIN_ONLY_PERMISSIONS]) {
+      expect(hasPermission('HR_PAYROLL_USER', permission)).toBe(false);
+    }
   });
 
-  it('makes HR_PAYROLL_MANAGER the payroll-user superset with every released permission', () => {
-    expect(permissionsFor('HR_PAYROLL_MANAGER')).toHaveLength(PERMISSIONS.length);
-    for (const permission of PERMISSIONS) expect(hasPermission('HR_PAYROLL_MANAGER', permission)).toBe(true);
+  it('makes HR_PAYROLL_MANAGER the payroll-user superset without admin-only access', () => {
+    expect(permissionsFor('HR_PAYROLL_MANAGER')).toHaveLength(PERMISSIONS.length - ADMIN_ONLY_PERMISSIONS.length);
+    for (const permission of PERMISSIONS.filter((candidate) => candidate !== 'roles:read')) {
+      expect(hasPermission('HR_PAYROLL_MANAGER', permission)).toBe(true);
+    }
+    for (const permission of ADMIN_ONLY_PERMISSIONS) expect(hasPermission('HR_PAYROLL_MANAGER', permission)).toBe(false);
   });
 
-  it('keeps ADMIN permission-empty until Phase 5', () => {
-    expect(permissionsFor('ADMIN')).toEqual([]);
+  it('gives ADMIN every catalogue permission', () => {
+    expect(permissionsFor('ADMIN')).toHaveLength(PERMISSIONS.length);
+    for (const permission of PERMISSIONS) expect(hasPermission('ADMIN', permission)).toBe(true);
   });
 
   it('gives EMPLOYEE reads plus self-service only', () => {
@@ -85,18 +99,21 @@ describe('role catalogue', () => {
 });
 
 describe('canSeeAllEmployees', () => {
-  it('is true for every released HR-capable role, and false for EMPLOYEE', () => {
+  it('is true for every released HR-capable role and ADMIN, and false for EMPLOYEE', () => {
     expect(canSeeAllEmployees(hr)).toBe(true);
     expect(canSeeAllEmployees(payroll)).toBe(true);
     expect(canSeeAllEmployees(payrollManager)).toBe(true);
+    expect(canSeeAllEmployees(admin)).toBe(true);
     expect(canSeeAllEmployees(employee)).toBe(false);
   });
 });
 
 describe('scopeToEmployee', () => {
-  it('lets HR_MANAGER through unrestricted', () => {
+  it('lets HR_MANAGER and ADMIN through unrestricted', () => {
     expect(scopeToEmployee(hr, 42)).toBe(42);
     expect(scopeToEmployee(hr, undefined)).toBeUndefined(); // no filter → all employees
+    expect(scopeToEmployee(admin, 42)).toBe(42);
+    expect(scopeToEmployee(admin, undefined)).toBeUndefined();
   });
 
   it('pins EMPLOYEE to their own record', () => {

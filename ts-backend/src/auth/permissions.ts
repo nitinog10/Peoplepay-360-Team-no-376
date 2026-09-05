@@ -8,6 +8,7 @@ import type { Actor } from '../lib/security';
  */
 export const PERMISSIONS = [
   'users:manage',
+  'roles:read',
   'departments:read',
   'departments:write',
   'leave-types:read',
@@ -90,7 +91,7 @@ const HR_PAYROLL_MANAGER: Permission[] = [
 ];
 
 /** Roles released through account management in the current phase. */
-export const ASSIGNABLE_ROLE_NAMES = ['EMPLOYEE', 'HR_MANAGER', 'HR_PAYROLL_USER', 'HR_PAYROLL_MANAGER'] as const satisfies readonly RoleName[];
+export const ASSIGNABLE_ROLE_NAMES = ['EMPLOYEE', 'HR_MANAGER', 'HR_PAYROLL_USER', 'HR_PAYROLL_MANAGER', 'ADMIN'] as const satisfies readonly RoleName[];
 export type AssignableRoleName = (typeof ASSIGNABLE_ROLE_NAMES)[number];
 
 export const ROLE_PERMISSIONS: Record<RoleName, ReadonlySet<Permission>> = {
@@ -98,8 +99,7 @@ export const ROLE_PERMISSIONS: Record<RoleName, ReadonlySet<Permission>> = {
   HR_MANAGER: new Set(HR_MANAGER),
   HR_PAYROLL_USER: new Set(HR_PAYROLL_USER),
   HR_PAYROLL_MANAGER: new Set(HR_PAYROLL_MANAGER),
-  // The enum/database row is created early, but ADMIN is not released until Phase 5.
-  ADMIN: new Set(),
+  ADMIN: new Set(PERMISSIONS),
 };
 
 export function hasPermission(role: RoleName, permission: Permission): boolean {
@@ -112,7 +112,7 @@ export function permissionsFor(role: RoleName): Permission[] {
 
 /** Roles whose reads are not restricted to their own employee record. */
 export function canSeeAllEmployees(actor: Actor): boolean {
-  return actor.role === 'HR_MANAGER' || actor.role === 'HR_PAYROLL_USER' || actor.role === 'HR_PAYROLL_MANAGER';
+  return actor.role === 'HR_MANAGER' || actor.role === 'HR_PAYROLL_USER' || actor.role === 'HR_PAYROLL_MANAGER' || actor.role === 'ADMIN';
 }
 
 /**

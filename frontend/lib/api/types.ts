@@ -86,7 +86,7 @@ export type ApprovalDecision = "APPROVED" | "REJECTED";
  * `:write` permission instead.
  */
 export const PERMISSIONS = [
-  "users:manage",
+  "users:manage", "roles:read",
   "departments:read", "departments:write",
   "leave-types:read", "leave-types:write",
   "work-schedules:read", "work-schedules:write",
@@ -157,6 +157,14 @@ export interface LoginBody {
 export interface Role {
   roleId: number;
   roleName: RoleName;
+}
+
+export interface RolePermissionMatrix {
+  permissions: Permission[];
+  roles: Array<{
+    roleName: RoleName;
+    permissions: Permission[];
+  }>;
 }
 
 export interface ManagedUser {

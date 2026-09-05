@@ -1,6 +1,6 @@
 # PeoplePay360 — Overall Implementation Plan & Status
 
-**Last audited:** 2026-09-06 (combined Phase 1–4 build, typecheck, zero-warning lint, 82 tests, two migrations, repeatable seed and 113/113 smoke verified).
+**Last audited:** 2026-09-06 (combined Phase 1–5 backend build/typecheck, zero-warning frontend checks, 82 tests, two migrations, repeatable seed, 145/145 smoke, and 25/25-page Webpack build verified).
 **Companion docs:** `docs/build-plan.md` (**the executable step-by-step queue derived from this file — start there**), `docs/phase-1-plan.md` (detailed schema, rules and API for Phases 1–2), `docs/phase-3-plan.md` (implemented provisional payroll schema/lifecycle source of truth for Phases 3–4), `pp360.txt` (problem statement), `HRMS OXP - 24 hours.excalidraw` (mockup), `ts-backend/README.md` (run instructions).
 
 **Legend**
@@ -38,28 +38,28 @@ The sketch numbers the roles ① → ⑤ and shows the access hierarchy on the b
 | 2 | ② `HR_MANAGER` | ✅ (same schema as Phase 1) | ✅ | ✅ FE-1…FE-6 and P2-1…P2-10 implemented; combined gate passed | `docs/phase-1-plan.md` |
 | 3 | ③ `HR_PAYROLL_USER` | 📝 provisional implementation; authoritative team SQL pending reconciliation | ✅ implemented + included in 82 tests and 113/113 smoke | ✅ P3-9…P3-12; combined production gate passed | `docs/phase-3-plan.md` |
 | 4 | ④ `HR_PAYROLL_MANAGER` | 📝 provisional implementation; authoritative team SQL pending reconciliation | ✅ P4-1…P4-4/P4-7 implemented and verified | ✅ P4-5/P4-6; dashboard + editors emitted by production build | `docs/build-plan.md` § Phase 4 |
-| 5 | ⑤ `ADMIN` | 📝 authoritative team SQL pending | 🟡 enum/database role row exists; no permissions or Phase 5 features released | ❌ | §6 below (scope only) |
+| 5 | ⑤ `ADMIN` | 📝 no separate Phase 5 schema supplied; released on the existing single-role model | ✅ P5-1/P5-2/P5-5 implemented and verified | ✅ P5-3/P5-4; `/users` + `/admin/roles`, 25/25-page production gate | `docs/build-plan.md` § Phase 5 |
 
 Cross-phase work (frontend shell, tests, docs, demo) is tracked in §7. Open decisions are in §8. The "schema arrives" playbook is §9.
 
 ---
 
-## 1. Repository snapshot (verified 2026-09-05)
+## 1. Repository snapshot (verified 2026-09-06)
 
 | Area | State | Evidence |
 |---|---|---|
-| `ts-backend/` app code | ✅ Express 5 + TypeScript 7, layered `router/schema/service` modules including payroll configuration and dashboard | `src/routes.ts`, `src/modules/*` |
-| Typecheck | ✅ backend `npm run typecheck`; frontend `npx next typegen` + `npx tsc --noEmit` | combined Phase 1–4 gate |
+| `ts-backend/` app code | ✅ Express 5 + TypeScript 7, layered `router/schema/service` modules including payroll configuration, dashboard, and ADMIN user/role policy | `src/routes.ts`, `src/modules/*` |
+| Typecheck | ✅ backend `npm run typecheck`; frontend `npx next typegen` + `npx tsc --noEmit` | combined Phase 1–5 gate |
 | Prisma schema + migrations | ✅ 20 application tables, 13 enums, initial + isolated provisional payroll migration | `prisma/schema.prisma`, `prisma/migrations/`; fresh MySQL exposed 21 tables including `_prisma_migrations` |
 | Prisma version | ✅ **6.19.3 pinned**; README and scripts aligned | `package.json`, `ts-backend/README.md` |
-| Seed | ✅ HR dataset, all role rows, payroll-user and payroll-manager logins, Regular Salary + 8 rules, bank-warning data and computed prior-month payrun; immediate second run idempotent | fresh ephemeral MySQL seed ×2 |
-| Smoke test | ✅ **113/113** Phase 1–4 checks against ephemeral MySQL 8.4.9 | `scripts/smoke.ts` |
+| Seed | ✅ HR dataset, all role rows, payroll-user, payroll-manager and dedicated ADMIN logins, Regular Salary + 8 rules, bank-warning data and computed prior-month payrun; immediate second run idempotent | fresh ephemeral MySQL seed ×2 |
+| Smoke test | ✅ **145/145** Phase 1–5 checks against ephemeral MySQL 8.4.9 | `scripts/smoke.ts` |
 | Unit tests (vitest) | ✅ **82/82 tests in 5 files** | `npm test` |
 | OpenAPI / request collection | ❌ | — |
 | npm scripts | ✅ Prisma, typecheck, test, smoke, ephemeral DB and generated-client build scripts aligned | `ts-backend/package.json`, README |
-| Local DB | ✅ ephemeral MySQL 8.4.9 applied both migrations, repeated the seed and passed 113/113 smoke; no persistent local MySQL/Docker required | `scripts/ephemeral-db.ts` |
-| `frontend/` | ✅ Next.js 16.3.4 Phase 1–4 application; Webpack production build, typecheck and zero-warning lint green; 24/24 static generation including `/payroll/dashboard` | `frontend/app`, `frontend/components`, `frontend/lib` |
-| Git | Uncommitted Phase 1–4 implementation and planning updates present; no commit was requested | `git status --short` |
+| Local DB | ✅ ephemeral MySQL 8.4.9 applied both migrations, repeated the seed and passed 145/145 smoke; no persistent local MySQL/Docker required | `scripts/ephemeral-db.ts` |
+| `frontend/` | ✅ Next.js 16.3.4 Phase 1–5 application; Webpack production build, typecheck and zero-warning lint green; **25/25** static generation including `/admin/roles` | `frontend/app`, `frontend/components`, `frontend/lib` |
+| Git | Uncommitted Phase 1–5 implementation and planning updates present; no commit was requested | `git status --short` |
 
 ---
 
@@ -87,17 +87,17 @@ Cross-phase work (frontend shell, tests, docs, demo) is tracked in §7. Open dec
 | Rotating opaque refresh token, SHA-256 hash in `refresh_tokens`, httpOnly cookie scoped to `/api/v1/auth` | ✅ smoke `refresh token rotation`, `reused refresh token rejected` |
 | `POST /auth/login` (username **or** work email), `/refresh`, `/logout`, `GET /auth/me` | ✅ smoke `HR login`, `employee login (by email)`, `bad password rejected`, `GET /auth/me` |
 | `last_login_at` updated on login | ✅ |
-| Permission catalogue (**26 permissions**) + explicit `ROLE_PERMISSIONS` sets | ✅ `EMPLOYEE`, frozen non-payroll `HR_MANAGER`, released `HR_PAYROLL_USER`, released all-permission `HR_PAYROLL_MANAGER`; `ADMIN` remains empty |
+| Permission catalogue (**27 permissions**) + explicit `ROLE_PERMISSIONS` sets | ✅ `EMPLOYEE`, frozen non-payroll `HR_MANAGER`, `HR_PAYROLL_USER`, `HR_PAYROLL_MANAGER`, and all-permission `ADMIN`; `roles:read` is ADMIN-only |
 | `authenticate` + `authorize(...permissions)` middleware | ✅ |
-| Row-level scoping for EMPLOYEE via `scopeToEmployee()` / `requireEmployeeScope()` | ✅ smoke `employee sees only self`, `employee cannot read another employee`, `employee sees only own contracts`, `employee cannot request for someone else` |
-| Users cannot change own role / deactivate self; deactivation & password change revoke sessions | ✅ smoke `HR cannot change own role` |
-| Role enum contains `EMPLOYEE`, `HR_MANAGER`, `HR_PAYROLL_USER`, `HR_PAYROLL_MANAGER`, `ADMIN` | ✅ first four are assignable and scoped appropriately; `ADMIN` stays withheld and permission-empty until Phase 5 |
+| Row-level scoping for EMPLOYEE via `scopeToEmployee()` / `requireEmployeeScope()` | ✅ smoke `employee sees only self`, `employee cannot read another employee`, `employee sees only own contracts`, `employee cannot request for someone else`; ADMIN unrestricted-scope checks pass |
+| Users cannot change own role / deactivate self; deactivation & password change revoke refresh sessions | ✅ smoke `HR cannot change own role`, `ADMIN cannot change own role`, `ADMIN cannot deactivate own account` |
+| Role enum contains `EMPLOYEE`, `HR_MANAGER`, `HR_PAYROLL_USER`, `HR_PAYROLL_MANAGER`, `ADMIN` | ✅ all five are assignable by ADMIN; non-ADMIN account managers receive and may assign EMPLOYEE only |
 
 ### 2.3 Data model (14 tables, all migrated ✅)
 
 | Table | Status | Notes |
 |---|---|---|
-| `roles` | ✅ | enum contains all five role literals; EMPLOYEE through HR_PAYROLL_MANAGER released, ADMIN withheld |
+| `roles` | ✅ | enum and lookup rows contain all five released role literals |
 | `departments` | ✅ | |
 | `leave_types` | ✅ | `default_annual_days` drives yearly balances; 0 = not balance-tracked |
 | `work_schedules` | ✅ | `days_of_week` as JSON (MySQL has no arrays); `weekly_hours` derived |
@@ -118,7 +118,7 @@ Deviations from the team SQL (all forced or additive) are listed in `docs/phase-
 
 | Module | Endpoints | Status |
 |---|---|---|
-| Users / roles | `GET/POST /users`, `GET/PATCH /users/:id`, `GET /roles` | ✅ smoke `HR creates user`, `employee cannot manage users` |
+| Users / roles | `GET/POST /users`, `GET/PATCH /users/:id`, `GET /roles`, `GET /roles/permissions` | ✅ ADMIN all-five catalogue/read-only matrix; non-ADMIN managers limited to EMPLOYEE; escalation/privileged-target guards covered by smoke |
 | Departments | `GET/POST /departments`, `GET/PATCH/DELETE /departments/:id` | ✅ smoke `create department`, `duplicate department → 409`, `delete department` |
 | Leave types | `GET/POST /leave-types`, `GET/PATCH/DELETE /leave-types/:id` | ✅ smoke `employee reads leave types` |
 | Work schedules | `GET/POST /work-schedules`, `GET/PATCH/DELETE /work-schedules/:id` | ✅ smoke `create work schedule (derived weekly hours)`, `invalid schedule → 400`, `delete work schedule` |
@@ -156,8 +156,8 @@ Deviations from the team SQL (all forced or additive) are listed in `docs/phase-
 |---|---|
 | Idempotent lookup seed (roles, departments, leave types, schedules) | ✅ |
 | Transactional demo data only when DB has no employees | ✅ |
-| Seeded logins: `hr.manager` (HR_MANAGER), `vikram.singh@oxp.com` (HR_PAYROLL_USER), `maya.shah@oxp.com` (HR_PAYROLL_MANAGER), employee work emails (EMPLOYEE) | ✅ |
-| Smoke test walking every released module and rule | ✅ **113/113** `scripts/smoke.ts` |
+| Seeded logins: `hr.manager` (HR_MANAGER), `vikram.singh@oxp.com` (HR_PAYROLL_USER), `maya.shah@oxp.com` (HR_PAYROLL_MANAGER), `admin` (ADMIN), employee work emails (EMPLOYEE) | ✅ |
+| Smoke test walking every released module and rule | ✅ **145/145** Phase 1–5 `scripts/smoke.ts` |
 | **vitest unit tests** on attendance, date, schedule, permission and safe payroll-engine rules | ✅ **82/82 tests in 5 files** |
 | **OpenAPI spec / Postman collection** | ❌ |
 | `package.json` scripts aligned with README (`prisma:*`, `typecheck`, `test`, generated-client build) | ✅ |
@@ -193,7 +193,7 @@ Frontend stack: Next.js 16 App Router, Tailwind 4, shadcn/ui, TanStack Query, re
 | Time Off Type unit (days/hours), requires-allocation flag, approval-by, colour, active | 📝 Not in schema. Candidate additive columns `requires_balance`, `is_active` if the team agrees. |
 | Allocations requiring approval before use | Accepted: HR creating the balance **is** the approval. |
 | Contract reference `CON/2026/0042`, job position, salary structure on contract | Reference number optional later; Phase 3 provisionally chose structure-on-payrun and snapshots it there. Reconcile if authoritative SQL later adds a contract default. |
-| Five roles / multi-role users | All five enum values now exist; only three roles are released. Users still hold one `role_id`; multi-role remains a 📝 for Phase 5. |
+| Five roles / multi-role users | All five roles are released. The current Phase 5 design intentionally retains one `users.role_id` per user; multi-role accounts remain future roadmap work rather than a release blocker. |
 | LATE attendance status, edit audit | Derived `is_late`, `missing_checkout`; `source = MANUAL` marks HR edits. |
 | Requests spanning two calendar years | Rejected with a clear message. |
 | User deletion | No backend `DELETE /users/:id`; P2-10 uses activation/deactivation only. Employee hard-delete remains the separate cascade path. |

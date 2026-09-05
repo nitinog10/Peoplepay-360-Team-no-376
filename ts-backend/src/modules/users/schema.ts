@@ -17,6 +17,7 @@ export const createUserSchema = z.object({
   username,
   password,
   role: assignableRole,
+  isActive: z.boolean().default(true),
 });
 export type CreateUserInput = z.infer<typeof createUserSchema>;
 
