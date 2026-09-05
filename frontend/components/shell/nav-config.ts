@@ -101,9 +101,14 @@ export const NAV: NavEntry[] = [
       { label: "Types", href: "/time-off/types", icon: TagsIcon, permission: "leave-types:write" },
     ],
   },
-  // Payroll is empty until Phase 3: `payroll:read` doesn't exist in the permission
-  // catalogue yet, so there is nothing here to gate on. P3-9/P3-11/P3-12 add
-  // Payruns, Payslips, Structures and Rules; a group with no visible child never
-  // renders, which is exactly the behaviour wanted today.
-  { label: "Payroll", icon: BanknoteIcon, children: [] },
+  {
+    label: "Payroll",
+    icon: BanknoteIcon,
+    children: [
+      { label: "Payruns", href: "/payroll/payruns", icon: BanknoteIcon, permission: "payroll:read" },
+      { label: "Payslips", href: "/payroll/payslips", icon: FileTextIcon, permission: "payroll:read" },
+      { label: "Salary Structures", href: "/payroll/structures", icon: WalletIcon, permission: "salary-config:read" },
+      { label: "Salary Rules", href: "/payroll/rules", icon: TagsIcon, permission: "salary-config:read" },
+    ],
+  },
 ];

@@ -44,6 +44,11 @@ const TONE: Record<string, Tone> = {
   APPROVED: "success",
   REJECTED: "danger",
   CANCELLED: "neutral",
+  // payroll lifecycle
+  DRAFT: "neutral",
+  COMPUTED: "info",
+  VALIDATED: "success",
+  PAID: "success",
 };
 
 /** `HALF_DAY` → "Half day". The API's enums are SCREAMING_SNAKE; screens are not. */

@@ -1,9 +1,6 @@
 /**
  * One entry point for data access: `api.employees.list(…)` for reads (pass the
  * result to `useQuery`), `api.departments.create(…)` for writes.
- *
- * `http` and `ApiError` come from `./client` when a screen needs the wrapper
- * directly; nothing outside `lib/api` should call `fetch`.
  */
 
 import { attendance } from "./attendance";
@@ -13,6 +10,10 @@ import { departments } from "./departments";
 import { employees } from "./employees";
 import { leaveBalances } from "./leave-balances";
 import { leaveTypes } from "./leave-types";
+import { payruns } from "./payruns";
+import { payslips } from "./payslips";
+import { salaryRules } from "./salary-rules";
+import { salaryStructures } from "./salary-structures";
 import { timeOff } from "./time-off";
 import { users } from "./users";
 import { workSchedules } from "./work-schedules";
@@ -25,12 +26,16 @@ export const api = {
   employees,
   leaveBalances,
   leaveTypes,
+  payruns,
+  payslips,
+  salaryRules,
+  salaryStructures,
   timeOff,
   users,
   workSchedules,
 };
 
-export { ApiError, hasAccessToken, http, onSessionEnded, refreshSession } from "./client";
+export { ApiError, download, hasAccessToken, http, onSessionEnded, refreshSession } from "./client";
 
 /** The query keys, for `invalidateQueries` after a write. */
 export { attendanceKeys } from "./attendance";
@@ -39,6 +44,10 @@ export { departmentKeys } from "./departments";
 export { employeeKeys } from "./employees";
 export { leaveBalanceKeys } from "./leave-balances";
 export { leaveTypeKeys } from "./leave-types";
+export { payrunKeys } from "./payruns";
+export { payslipKeys } from "./payslips";
+export { salaryRuleKeys } from "./salary-rules";
+export { salaryStructureKeys } from "./salary-structures";
 export { timeOffKeys } from "./time-off";
 export { roleKeys, userKeys } from "./users";
 export { workScheduleKeys } from "./work-schedules";
@@ -48,6 +57,10 @@ export type { ListContractsQuery, ContractBody, UpdateContractBody } from "./con
 export type { ListEmployeesQuery, CreateScheduleAssignmentBody, UpdateScheduleAssignmentBody } from "./employees";
 export type { MyBalancesResponse, ListBalancesQuery, CreateBalanceBody, UpdateBalanceBody, InitializeYearBody, InitializeYearResult, RecomputeResult } from "./leave-balances";
 export type { LeaveTypeBody } from "./leave-types";
+export type { CreatePayrunBody, EligibilityQuery, ListPayrunsQuery } from "./payruns";
+export type { ListPayslipsQuery } from "./payslips";
+export type { ListSalaryRulesQuery } from "./salary-rules";
+export type { ListSalaryStructuresQuery } from "./salary-structures";
 export type { ListTimeOffRequestsQuery, TimeOffRequestBody, DecisionTimeOffBody } from "./time-off";
 export type { ListUsersQuery, CreateUserBody, UpdateUserBody } from "./users";
 export type { WorkScheduleBody } from "./work-schedules";

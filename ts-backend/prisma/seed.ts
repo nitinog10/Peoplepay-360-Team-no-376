@@ -10,12 +10,14 @@ import { env } from '../src/config/env';
 import { prisma } from '../src/lib/prisma';
 import { addDays, isoWeekday, parseTime, todayLocal } from '../src/lib/dates';
 import { hashPassword } from '../src/lib/security';
+import { getActiveContract } from '../src/modules/contracts/service';
+import { compute as computePayrun } from '../src/modules/payruns/service';
 import { weeklyHours } from '../src/modules/work-schedules/resolve';
 
 const log = (msg: string) => console.log(`[seed] ${msg}`);
 
 async function seedLookups() {
-  for (const roleName of ['EMPLOYEE', 'HR_MANAGER'] as const) {
+  for (const roleName of ['EMPLOYEE', 'HR_MANAGER', 'HR_PAYROLL_USER', 'HR_PAYROLL_MANAGER', 'ADMIN'] as const) {
     await prisma.role.upsert({ where: { roleName }, update: {}, create: { roleName } });
   }
 
@@ -56,6 +58,54 @@ async function seedLookups() {
     await prisma.workSchedule.upsert({ where: { scheduleName: s.scheduleName }, update: data, create: { scheduleName: s.scheduleName, ...data } });
   }
   log('lookup data ready (roles, departments, leave types, work schedules)');
+}
+
+async function seedPayrollConfiguration() {
+  const structure = await prisma.salaryStructure.upsert({
+    where: { name: 'Regular Salary' },
+    update: { description: 'Standard monthly salary configuration', currency: env.DEFAULT_CURRENCY, isActive: true },
+    create: { name: 'Regular Salary', description: 'Standard monthly salary configuration', currency: env.DEFAULT_CURRENCY },
+  });
+  const rules = [
+    { name: 'Basic', code: 'BASIC', category: 'BASIC' as const, sequence: 10, method: 'FORMULA' as const, formula: 'round(contractWage * max(0, expectedDays - unpaidDays) / expectedDays, 2)' },
+    { name: 'House Rent Allowance', code: 'HRA', category: 'ALLOWANCE' as const, sequence: 20, method: 'PERCENTAGE' as const, percentage: 40, percentageBase: 'BASIC' as const },
+    { name: 'Standard Allowance', code: 'STANDARD_ALLOWANCE', category: 'ALLOWANCE' as const, sequence: 30, method: 'FIXED' as const, fixedAmount: 2000 },
+    { name: 'Gross Salary', code: 'GROSS', category: 'GROSS' as const, sequence: 40, method: 'FORMULA' as const, formula: "categories['BASIC'] + categories['ALLOWANCE']" },
+    { name: 'Provident Fund', code: 'PF', category: 'DEDUCTION' as const, sequence: 50, method: 'PERCENTAGE' as const, percentage: 12, percentageBase: 'BASIC' as const },
+    { name: 'Professional Tax', code: 'PROFESSIONAL_TAX', category: 'DEDUCTION' as const, sequence: 60, method: 'FIXED' as const, fixedAmount: 200 },
+    { name: 'ESIC', code: 'ESIC', category: 'DEDUCTION' as const, sequence: 70, method: 'PERCENTAGE' as const, percentage: 0.75, percentageBase: 'GROSS' as const },
+    { name: 'Net Salary', code: 'NET', category: 'NET' as const, sequence: 80, method: 'FORMULA' as const, formula: "categories['GROSS'] - categories['DEDUCTION']" },
+  ];
+  for (const rule of rules) {
+    const operands = {
+      fixedAmount: 'fixedAmount' in rule ? rule.fixedAmount : null,
+      percentage: 'percentage' in rule ? rule.percentage : null,
+      percentageBase: 'percentageBase' in rule ? rule.percentageBase : null,
+      formula: 'formula' in rule ? rule.formula : null,
+    };
+    await prisma.salaryRule.upsert({
+      where: { code: rule.code },
+      update: {
+        salaryStructureId: structure.salaryStructureId,
+        name: rule.name,
+        category: rule.category,
+        sequence: rule.sequence,
+        method: rule.method,
+        ...operands,
+        isActive: true,
+      },
+      create: {
+        salaryStructureId: structure.salaryStructureId,
+        name: rule.name,
+        code: rule.code,
+        category: rule.category,
+        sequence: rule.sequence,
+        method: rule.method,
+        ...operands,
+      },
+    });
+  }
+  log('payroll configuration ready (Regular Salary, 8 ordered rules)');
 }
 
 /** Deterministic pseudo-random in [0,1) so re-seeding a fresh DB yields the same data. */
@@ -128,11 +178,20 @@ async function seedTransactional() {
   // ---- users ----
   const hrHash = await hashPassword(env.SEED_HR_PASSWORD);
   const empHash = await hashPassword(env.SEED_EMPLOYEE_PASSWORD);
+  const payrollHash = await hashPassword(env.SEED_PAYROLL_PASSWORD);
   await prisma.user.create({ data: { employeeId: sara.employeeId, username: env.SEED_HR_USERNAME, passwordHash: hrHash, roleId: roles.HR_MANAGER } });
   for (const e of all.filter((e) => e.employeeId !== sara.employeeId)) {
-    await prisma.user.create({ data: { employeeId: e.employeeId, username: e.email, passwordHash: empHash, roleId: roles.EMPLOYEE } });
+    const isPayrollUser = e.employeeId === vikram.employeeId;
+    await prisma.user.create({
+      data: {
+        employeeId: e.employeeId,
+        username: e.email,
+        passwordHash: isPayrollUser ? payrollHash : empHash,
+        roleId: isPayrollUser ? roles.HR_PAYROLL_USER : roles.EMPLOYEE,
+      },
+    });
   }
-  log(`users: ${env.SEED_HR_USERNAME} (HR_MANAGER) + ${all.length - 1} employees (username = work email)`);
+  log(`users: ${env.SEED_HR_USERNAME} (HR_MANAGER), ${vikram.email} (HR_PAYROLL_USER), and ${all.length - 2} employees`);
 
   // ---- contracts ----
   for (const e of all) {
@@ -253,9 +312,119 @@ async function seedTransactional() {
   log('time off requests created (2 approved, 2 pending, 1 rejected)');
 }
 
+async function ensurePayrollLogin() {
+  const employee = await prisma.employee.findUnique({
+    where: { email: 'vikram.singh@oxp.com' },
+    include: { user: true },
+  });
+  if (!employee) {
+    log('payroll demo login skipped: vikram.singh@oxp.com is not present');
+    return;
+  }
+
+  const role = await prisma.role.findUniqueOrThrow({ where: { roleName: 'HR_PAYROLL_USER' } });
+  if (employee.user) {
+    await prisma.user.update({ where: { userId: employee.user.userId }, data: { roleId: role.roleId } });
+  } else {
+    await prisma.user.create({
+      data: {
+        employeeId: employee.employeeId,
+        username: employee.email,
+        passwordHash: await hashPassword(env.SEED_PAYROLL_PASSWORD),
+        roleId: role.roleId,
+      },
+    });
+  }
+  log(`payroll login ready: ${employee.email} (HR_PAYROLL_USER)`);
+}
+
+async function seedPayrollPeople() {
+  const employees = await prisma.employee.findMany({
+    where: {
+      email: {
+        in: [
+          'sara.khan@oxp.com',
+          'maya.shah@oxp.com',
+          'vikram.singh@oxp.com',
+          'john.dsouza@oxp.com',
+          'neha.patel@oxp.com',
+          'priya.nair@oxp.com',
+          'rohan.verma@oxp.com',
+        ],
+      },
+    },
+  });
+  for (const employee of employees) {
+    await prisma.employeeBankDetail.upsert({
+      where: { employeeId: employee.employeeId },
+      update: {},
+      create: {
+        employeeId: employee.employeeId,
+        accountHolderName: `${employee.firstName} ${employee.lastName}`,
+        bankName: 'PeoplePay Demo Bank',
+        accountNumber: `PP360${String(employee.employeeId).padStart(8, '0')}`,
+        routingCode: 'PPAY0000360',
+        branchName: 'Mumbai Central',
+      },
+    });
+  }
+  log(`bank details ready for ${employees.length} employees (Aarav intentionally omitted for a warning)`);
+}
+
+async function seedPayrollHistory() {
+  const today = todayLocal();
+  const periodStart = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 1, 1));
+  const periodEnd = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 0));
+  const name = `Regular Salary - ${periodStart.toISOString().slice(0, 7)}`;
+  const structure = await prisma.salaryStructure.findUniqueOrThrow({ where: { name: 'Regular Salary' } });
+  const creator = await prisma.employee.findUnique({ where: { email: 'vikram.singh@oxp.com' } });
+  if (!creator) {
+    log('representative payrun skipped: payroll demo employee is not present');
+    return;
+  }
+
+  let run = await prisma.payrun.findFirst({ where: { name, periodStart, periodEnd }, select: { payrunId: true, status: true } });
+  if (!run) {
+    const employees = await prisma.employee.findMany({ where: { status: 'ACTIVE' }, orderBy: { employeeId: 'asc' }, take: 4 });
+    const shells = [];
+    for (const employee of employees) {
+      const contract = await getActiveContract(employee.employeeId, periodEnd);
+      if (!contract?.baseSalary || !contract.currency || contract.currency.toUpperCase() !== structure.currency.toUpperCase()) continue;
+      shells.push({
+        employeeId: employee.employeeId,
+        contractId: contract.contractId,
+        contractWage: contract.baseSalary,
+        currency: contract.currency,
+      });
+    }
+    if (shells.length === 0) {
+      log('representative payrun skipped: no eligible employees');
+      return;
+    }
+    run = await prisma.payrun.create({
+      data: {
+        name,
+        salaryStructureId: structure.salaryStructureId,
+        periodStart,
+        periodEnd,
+        currency: structure.currency,
+        createdBy: creator.employeeId,
+        payslips: { create: shells },
+      },
+      select: { payrunId: true, status: true },
+    });
+  }
+  if (run.status === 'DRAFT' || run.status === 'COMPUTED') await computePayrun(run.payrunId);
+  log(`representative computed payrun ready: ${name}`);
+}
+
 async function main() {
   await seedLookups();
+  await seedPayrollConfiguration();
   await seedTransactional();
+  await ensurePayrollLogin();
+  await seedPayrollPeople();
+  await seedPayrollHistory();
   log('done');
 }
 

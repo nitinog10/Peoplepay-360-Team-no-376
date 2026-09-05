@@ -187,10 +187,7 @@ async function send(path: string, options: RequestOptions): Promise<Response> {
   }
 }
 
-export async function request<T>(
-  path: string,
-  options: RequestOptions = {},
-): Promise<T> {
+async function responseWithRefresh(path: string, options: RequestOptions): Promise<Response> {
   let res = await send(path, options);
 
   if (res.status === 401 && !options.noRetry) {
@@ -207,10 +204,35 @@ export async function request<T>(
       throw toApiError(401, body);
     }
   }
+  return res;
+}
 
+export async function request<T>(
+  path: string,
+  options: RequestOptions = {},
+): Promise<T> {
+  const res = await responseWithRefresh(path, options);
   const body = await readBody(res);
   if (!res.ok) throw toApiError(res.status, body);
   return body as T;
+}
+
+export interface DownloadedFile {
+  blob: Blob;
+  filename: string | null;
+  contentType: string | null;
+}
+
+/** Authenticated binary response with the same single-flight refresh path as JSON. */
+export async function download(
+  path: string,
+  options: Omit<RequestOptions, "method" | "body"> = {},
+): Promise<DownloadedFile> {
+  const res = await responseWithRefresh(path, { ...options, method: "GET" });
+  if (!res.ok) throw toApiError(res.status, await readBody(res));
+  const disposition = res.headers.get("content-disposition");
+  const filename = disposition?.match(/filename="?([^";]+)"?/i)?.[1] ?? null;
+  return { blob: await res.blob(), filename, contentType: res.headers.get("content-type") };
 }
 
 export const http = {
@@ -222,6 +244,7 @@ export const http = {
     request<T>(path, { ...options, method: "PATCH", body: body ?? {} }),
   delete: <T>(path: string, options?: Omit<RequestOptions, "method" | "body">) =>
     request<T>(path, { ...options, method: "DELETE" }),
+  download,
 };
 
 // ---------- auth ----------

@@ -18,12 +18,25 @@ import {
 } from './permissions';
 
 const hr: Actor = { userId: 1, employeeId: 1, role: 'HR_MANAGER', username: 'hr.manager' };
+const payroll: Actor = { userId: 3, employeeId: 3, role: 'HR_PAYROLL_USER', username: 'payroll.user' };
 const employee: Actor = { userId: 2, employeeId: 7, role: 'EMPLOYEE', username: 'aarav.mehta@oxp.com' };
 
+const PAYROLL_PERMISSIONS = ['payroll:read', 'payruns:write', 'payslips:write', 'salary-config:read'] as const;
+
 describe('role catalogue', () => {
-  it('gives HR_MANAGER every permission', () => {
-    expect(permissionsFor('HR_MANAGER')).toHaveLength(PERMISSIONS.length);
-    for (const p of PERMISSIONS) expect(hasPermission('HR_MANAGER', p)).toBe(true);
+  it('keeps HR_MANAGER on the explicit HR permission set without payroll access', () => {
+    expect(permissionsFor('HR_MANAGER')).toHaveLength(PERMISSIONS.length - PAYROLL_PERMISSIONS.length);
+    for (const permission of PAYROLL_PERMISSIONS) expect(hasPermission('HR_MANAGER', permission)).toBe(false);
+  });
+
+  it('makes HR_PAYROLL_USER the HR_MANAGER superset with every released permission', () => {
+    expect(permissionsFor('HR_PAYROLL_USER')).toHaveLength(PERMISSIONS.length);
+    for (const permission of PERMISSIONS) expect(hasPermission('HR_PAYROLL_USER', permission)).toBe(true);
+  });
+
+  it('keeps unreleased roles permission-empty', () => {
+    expect(permissionsFor('HR_PAYROLL_MANAGER')).toEqual([]);
+    expect(permissionsFor('ADMIN')).toEqual([]);
   });
 
   it('gives EMPLOYEE reads plus self-service only', () => {
@@ -43,6 +56,10 @@ describe('role catalogue', () => {
       'attendance:write',
       'leave-balances:write',
       'time-off:decide',
+      'payroll:read',
+      'payruns:write',
+      'payslips:write',
+      'salary-config:read',
     ] as const;
     for (const p of denied) expect(hasPermission('EMPLOYEE', p)).toBe(false);
     // Guards against a write permission being added to PERMISSIONS and quietly
@@ -61,8 +78,9 @@ describe('role catalogue', () => {
 });
 
 describe('canSeeAllEmployees', () => {
-  it('is true for HR_MANAGER and false for EMPLOYEE', () => {
+  it('is true for HR_MANAGER and HR_PAYROLL_USER, and false for EMPLOYEE', () => {
     expect(canSeeAllEmployees(hr)).toBe(true);
+    expect(canSeeAllEmployees(payroll)).toBe(true);
     expect(canSeeAllEmployees(employee)).toBe(false);
   });
 });

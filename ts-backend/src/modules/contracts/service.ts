@@ -14,6 +14,7 @@ const include = {
 } as const;
 
 type ContractRow = Prisma.ContractGetPayload<{ include: typeof include }>;
+type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0] | typeof prisma;
 
 function present(c: ContractRow, today: Date) {
   const covers =
@@ -34,9 +35,9 @@ export async function expireContracts(today: Date = todayLocal()) {
   return result.count;
 }
 
-/** The single resolver payroll will reuse later: the ACTIVE contract covering `date`. */
-export async function getActiveContract(employeeId: number, date: Date = todayLocal()) {
-  return prisma.contract.findFirst({
+/** The single resolver payroll reuses: the ACTIVE contract covering `date`. */
+export async function getActiveContract(employeeId: number, date: Date = todayLocal(), tx: Tx = prisma) {
+  return tx.contract.findFirst({
     where: {
       employeeId,
       status: 'ACTIVE',

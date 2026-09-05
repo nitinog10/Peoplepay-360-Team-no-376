@@ -1,7 +1,7 @@
 # PeoplePay360 — Overall Implementation Plan & Status
 
-**Last audited:** 2026-09-05 (P1/P2 combined build, typecheck, lint, unit tests, migration/seed and smoke verified).
-**Companion docs:** `docs/build-plan.md` (**the executable step-by-step queue derived from this file — start there**), `docs/phase-1-plan.md` (detailed schema, rules and API for Phases 1–2), `pp360.txt` (problem statement), `HRMS OXP - 24 hours.excalidraw` (mockup), `ts-backend/README.md` (run instructions).
+**Last audited:** 2026-09-05 (combined P1/P2/P3 build, typecheck, lint, 81 tests, two migrations, repeatable seed and 84/84 smoke verified).
+**Companion docs:** `docs/build-plan.md` (**the executable step-by-step queue derived from this file — start there**), `docs/phase-1-plan.md` (detailed schema, rules and API for Phases 1–2), `docs/phase-3-plan.md` (implemented provisional Phase 3 schema, lifecycle, API and frontend source of truth), `pp360.txt` (problem statement), `HRMS OXP - 24 hours.excalidraw` (mockup), `ts-backend/README.md` (run instructions).
 
 **Legend**
 
@@ -17,7 +17,7 @@
 
 ## 0. Role → Phase flow (from the handwritten sketch + PDF §3)
 
-The sketch numbers the roles ① → ⑤ and shows the access hierarchy on the back page. **Each phase delivers one role.** Phases 1 and 2 were planned and built together (see `docs/phase-1-plan.md`).
+The sketch numbers the roles ① → ⑤ and shows the access hierarchy on the back page. **Each phase delivers one role.** Phases 1 and 2 share `docs/phase-1-plan.md`; Phase 3 is implemented from the provisional contract in `docs/phase-3-plan.md`.
 
 ```
 ⑤ ADMIN                 CRUD access to everything (users, roles, permissions, all modules)
@@ -36,9 +36,9 @@ The sketch numbers the roles ① → ⑤ and shows the access hierarchy on the b
 |---|---|---|---|---|---|
 | 1 | ① `EMPLOYEE` | ✅ received 2026-09-05 | ✅ | ✅ P1-1…P1-5 implemented; combined P1/P2 gate passed | `docs/phase-1-plan.md` |
 | 2 | ② `HR_MANAGER` | ✅ (same schema as Phase 1) | ✅ | ✅ FE-1…FE-6 and P2-1…P2-10 implemented; combined gate passed | `docs/phase-1-plan.md` |
-| 3 | ③ `HR_PAYROLL_USER` | ⏳ to be given | ⏳ | ❌ | §4 below (scope only) |
-| 4 | ④ `HR_PAYROLL_MANAGER` | ⏳ to be given | ⏳ | ❌ | §5 below (scope only) |
-| 5 | ⑤ `ADMIN` | ⏳ to be given | ⏳ | ❌ | §6 below (scope only) |
+| 3 | ③ `HR_PAYROLL_USER` | 📝 provisional implementation; authoritative team SQL pending reconciliation | ✅ implemented + 81 tests + 84/84 smoke | ✅ P3-9…P3-12; combined production gate passed | `docs/phase-3-plan.md` |
+| 4 | ④ `HR_PAYROLL_MANAGER` | 📝 authoritative team SQL pending | 🟡 enum/database role row exists; no permissions or Phase 4 features released | ❌ | §5 below (scope only) |
+| 5 | ⑤ `ADMIN` | 📝 authoritative team SQL pending | 🟡 enum/database role row exists; no permissions or Phase 5 features released | ❌ | §6 below (scope only) |
 
 Cross-phase work (frontend shell, tests, docs, demo) is tracked in §7. Open decisions are in §8. The "schema arrives" playbook is §9.
 
@@ -48,18 +48,18 @@ Cross-phase work (frontend shell, tests, docs, demo) is tracked in §7. Open dec
 
 | Area | State | Evidence |
 |---|---|---|
-| `ts-backend/` app code | ✅ Express 5 + TypeScript 7, 11 modules, layered `router/schema/service` | `src/routes.ts`, `src/modules/*` |
-| Typecheck | ✅ backend `npm run typecheck`; frontend `npx tsc --noEmit` | combined P1/P2 gate |
-| Prisma schema + migration | ✅ 14 application tables, 9 enums, `20260905000000_init` | `prisma/schema.prisma`, `prisma/migrations/` |
+| `ts-backend/` app code | ✅ Express 5 + TypeScript 7, layered `router/schema/service` modules including payroll | `src/routes.ts`, `src/modules/*` |
+| Typecheck | ✅ backend `npm run typecheck`; frontend `npx tsc --noEmit` | combined P1/P2/P3 gate |
+| Prisma schema + migrations | ✅ 20 application tables, 13 enums, initial + isolated Phase 3 payroll migrations | `prisma/schema.prisma`, `prisma/migrations/`; fresh MySQL exposed 21 tables including `_prisma_migrations` |
 | Prisma version | ✅ **6.19.3 pinned**; README and scripts aligned | `package.json`, `ts-backend/README.md` |
-| Seed | ✅ roles, 4 departments, 4 leave types, 4 schedules, 9 employees, users, contracts, assignments, balances, 14 days attendance, 5 requests | fresh ephemeral MySQL seed |
-| Smoke test | ✅ 57/57 checks against ephemeral MySQL 8.4.9 | `scripts/smoke.ts` |
-| Unit tests (vitest) | ✅ 68/68 tests in 4 files | `npm test` |
+| Seed | ✅ prior HR dataset plus all role rows, payroll login, Regular Salary + 8 rules, bank-warning data and computed prior-month payrun; passed twice idempotently | fresh ephemeral MySQL seed ×2 |
+| Smoke test | ✅ **84/84** P1/P2/P3 checks against ephemeral MySQL 8.4.9 | `scripts/smoke.ts` |
+| Unit tests (vitest) | ✅ **81/81 tests in 5 files** | `npm test` |
 | OpenAPI / request collection | ❌ | — |
 | npm scripts | ✅ Prisma, typecheck, test, smoke, ephemeral DB and generated-client build scripts aligned | `ts-backend/package.json`, README |
-| Local DB | ✅ ephemeral MySQL 8.4.9 migration/seed/smoke verified; no persistent local MySQL/Docker required | `scripts/ephemeral-db.ts` |
-| `frontend/` | ✅ Next.js 16.3.4 P1/P2 application; Webpack production build, typecheck and lint green | `frontend/app`, `frontend/components`, `frontend/lib` |
-| Git | Uncommitted P1/P2 implementation and planning updates present; no commit was requested | `git status --short` |
+| Local DB | ✅ ephemeral MySQL 8.4.9 applied both migrations, repeatable seed and 84/84 smoke; no persistent local MySQL/Docker required | `scripts/ephemeral-db.ts` |
+| `frontend/` | ✅ Next.js 16.3.4 P1/P2/P3 application; Webpack production build, typecheck and lint green; 23/23 static generation and all payroll routes emitted | `frontend/app`, `frontend/components`, `frontend/lib` |
+| Git | Uncommitted P1/P2/P3 implementation and planning updates present; no commit was requested | `git status --short` |
 
 ---
 
@@ -87,11 +87,11 @@ Cross-phase work (frontend shell, tests, docs, demo) is tracked in §7. Open dec
 | Rotating opaque refresh token, SHA-256 hash in `refresh_tokens`, httpOnly cookie scoped to `/api/v1/auth` | ✅ smoke `refresh token rotation`, `reused refresh token rejected` |
 | `POST /auth/login` (username **or** work email), `/refresh`, `/logout`, `GET /auth/me` | ✅ smoke `HR login`, `employee login (by email)`, `bad password rejected`, `GET /auth/me` |
 | `last_login_at` updated on login | ✅ |
-| Permission catalogue (19 permissions) + `ROLE_PERMISSIONS` map for `EMPLOYEE`, `HR_MANAGER` | ✅ `src/auth/permissions.ts` |
+| Permission catalogue (23 permissions) + explicit `ROLE_PERMISSIONS` sets | ✅ `EMPLOYEE`, frozen non-payroll `HR_MANAGER`, released `HR_PAYROLL_USER`; unreleased roles empty |
 | `authenticate` + `authorize(...permissions)` middleware | ✅ |
 | Row-level scoping for EMPLOYEE via `scopeToEmployee()` / `requireEmployeeScope()` | ✅ smoke `employee sees only self`, `employee cannot read another employee`, `employee sees only own contracts`, `employee cannot request for someone else` |
 | Users cannot change own role / deactivate self; deactivation & password change revoke sessions | ✅ smoke `HR cannot change own role` |
-| Role enum limited to `EMPLOYEE`, `HR_MANAGER` | 🟡 must be extended in Phases 3–5 (migration) |
+| Role enum contains `EMPLOYEE`, `HR_MANAGER`, `HR_PAYROLL_USER`, `HR_PAYROLL_MANAGER`, `ADMIN` | ✅ only the first three are assignable; the latter two stay permission-empty until their phases |
 
 ### 2.3 Data model (14 tables, all migrated ✅)
 
@@ -156,9 +156,9 @@ Deviations from the team SQL (all forced or additive) are listed in `docs/phase-
 |---|---|
 | Idempotent lookup seed (roles, departments, leave types, schedules) | ✅ |
 | Transactional demo data only when DB has no employees | ✅ |
-| Seeded logins: `hr.manager` (HR_MANAGER), every employee's work email (EMPLOYEE) | ✅ |
-| Smoke test walking every module and rule | ✅ `scripts/smoke.ts` |
-| **vitest unit tests** on pure attendance, date, schedule and permission rules | ✅ 68/68 tests in 4 files |
+| Seeded logins: `hr.manager` (HR_MANAGER), `vikram.singh@oxp.com` (HR_PAYROLL_USER), employee work emails (EMPLOYEE) | ✅ |
+| Smoke test walking every released module and rule | ✅ 84/84 `scripts/smoke.ts` |
+| **vitest unit tests** on attendance, date, schedule, permission and safe payroll-engine rules | ✅ 81/81 tests in 5 files |
 | **OpenAPI spec / Postman collection** | ❌ |
 | `package.json` scripts aligned with README (`prisma:*`, `typecheck`, `test`, generated-client build) | ✅ |
 | README Prisma version pinned to installed 6.19.3 | ✅ |
@@ -192,8 +192,8 @@ Frontend stack: Next.js 16 App Router, Tailwind 4, shadcn/ui, TanStack Query, re
 |---|---|
 | Time Off Type unit (days/hours), requires-allocation flag, approval-by, colour, active | 📝 Not in schema. Candidate additive columns `requires_balance`, `is_active` if the team agrees. |
 | Allocations requiring approval before use | Accepted: HR creating the balance **is** the approval. |
-| Contract reference `CON/2026/0042`, job position, salary structure on contract | Reference number optional later; **salary structure link arrives with the Phase 3/4 schema** (`contracts.salary_structure_id` or on payrun). |
-| Five roles / multi-role users | Single `role_id` per user; enum extended per phase. Multi-role is a 📝 for Phase 5. |
+| Contract reference `CON/2026/0042`, job position, salary structure on contract | Reference number optional later; Phase 3 provisionally chose structure-on-payrun and snapshots it there. Reconcile if authoritative SQL later adds a contract default. |
+| Five roles / multi-role users | All five enum values now exist; only three roles are released. Users still hold one `role_id`; multi-role remains a 📝 for Phase 5. |
 | LATE attendance status, edit audit | Derived `is_late`, `missing_checkout`; `source = MANUAL` marks HR edits. |
 | Requests spanning two calendar years | Rejected with a clear message. |
 | User deletion | No backend `DELETE /users/:id`; P2-10 uses activation/deactivation only. Employee hard-delete remains the separate cascade path. |
@@ -219,57 +219,60 @@ These exist today and must **not** be re-implemented:
 
 ---
 
-## 4. Phase 3 — HR_PAYROLL_USER (payruns & payslips) ⏳ schema pending
+## 4. Phase 3 — HR_PAYROLL_USER (payruns & payslips) ✅ implemented and verified; schema provisional
 
-**Access (PDF §3 + sketch):** everything HR_MANAGER has, **plus Create / Read / Update** on Payruns and Payslips, **read-only** Salary Structures and Salary Rules. No delete on payroll records, no config edits.
+**Access (PDF §3 + sketch):** everything HR_MANAGER has, **plus Create / Read / Update** on Payruns and Payslips, **read-only** Salary Structures and Salary Rules. No payroll hard-delete, no config edits. The implementation contract is `docs/phase-3-plan.md`; authoritative Phase 3/4 team SQL is still pending reconciliation.
 
 ### 4.1 Mockup screens (section 4 "Payroll — Payrun & Payslips")
 
 | Screen | Key content | Status |
 |---|---|---|
-| Payroll ▼ menu: Payruns, Payslips, Salary Structures, Salary Rules, Dashboard | role-filtered | ❌ |
-| Payruns list | name, structure, period, status, #payslips; search | ❌ |
-| **New Pay Run wizard — Step 1** (popup) | scope: Salary Structure, Period (from/to or month), employee type filter; **Continue does not create anything** | ❌ |
-| **Step 2** employee selection | eligible employees (ACTIVE, active contract in period, not already in a payrun for the period); multi-select; **Create Payrun** creates the batch with only selected employees | ❌ |
-| Payrun form | run name, structure, period, status; actions **COMPUTE → VALIDATE → MARK PAID → SEND PAYSLIPS**; payslip list; warnings panel | ❌ |
-| Payslips list | employee, structure, payrun, period, status, worked days; search; period filter | ❌ |
-| Payslip form | identification block + **Salary Computation** table (rule, category, amount) with Basic / Allowances / Deductions / Gross / Net; **PRINT PAYSLIP** (PDF) | ❌ |
-| Salary Structures / Rules | read-only list + form for this role | ❌ |
+| Payroll ▼ menu: Payruns, Payslips, Salary Structures, Salary Rules | permission-filtered; no Phase 3 dashboard | ✅ |
+| Payruns list | name, structure, period, status, #payslips; URL-backed search/filter | ✅ `/payroll/payruns` |
+| **New Pay Run wizard — Step 1** | structure/period/contract type; Continue performs eligibility GET only | ✅ |
+| **Step 2** employee selection | flagged/selectable employees; sole POST includes selected IDs only | ✅ |
+| Payrun detail | COMPUTE → VALIDATE → MARK PAID → SEND, cancel, payslips, hard/soft warnings | ✅ `/payroll/payruns/[id]` |
+| Payslips list | employee, structure, payrun, period, status, worked days, amounts | ✅ `/payroll/payslips` |
+| Payslip detail | identification, input snapshots, ordered Salary Computation, authoritative totals, authenticated PDF | ✅ `/payroll/payslips/[id]` |
+| Salary Structures / Rules | read-only list/detail with `editable={false}` | ✅ `/payroll/structures`, `/payroll/structures/[id]`, `/payroll/rules` |
+| Payroll Dashboard | explicitly Phase 4, not part of Phase 3 | ❌ |
 
-### 4.2 Business rules to implement (from PDF §4 B5–B8, mockup notes)
+### 4.2 Business rules (from PDF §4 B5–B8, mockup notes)
 
 | Rule | Status |
 |---|---|
-| Payrun lifecycle `DRAFT → COMPUTED → VALIDATED → PAID` (+ `CANCELLED`); transitions guarded; PAID/VALIDATED immutable history | ❌ |
-| Wizard: two steps, record created only on "Create Payrun", only selected employees included | ❌ |
-| Eligibility: ACTIVE employee **and** `getActiveContract(employeeId, periodEnd)` exists; exclude employees already on a payslip for an overlapping period (duplicate warning otherwise) | ❌ |
-| Compute: for each payslip take the period contract wage, the payrun's structure, run rules **in sequence**, write payslip lines per rule/category, totals Basic / Allowances / Deductions / Gross / Net | ❌ |
-| Worked days / hours from attendance + schedule for the period; unpaid leave days from approved requests of untracked types | ❌ |
-| Warnings surfaced before finalization: no active contract, no schedule, missing bank details, duplicate payslip, zero/negative net, unvalidated drafts | ❌ |
-| Validate: blocks on hard warnings; Mark Paid: stamps paid date; both preserved as history | ❌ |
-| Payslip PDF generation (server-side, e.g. `pdfkit`/`@react-pdf`) | ❌ |
-| Send Payslips: bulk email from payrun (nodemailer + SMTP from env; dev = console/Ethereal transport) | ❌ |
-| Recompute allowed only while DRAFT/COMPUTED | ❌ |
+| Payrun lifecycle `DRAFT → COMPUTED → VALIDATED → PAID` (+ `CANCELLED`); transitions guarded; PAID/CANCELLED terminal | ✅ 84/84 smoke lifecycle guards |
+| Wizard writes only on Create and includes only selected employees | ✅ selected-only create smoke |
+| Eligibility uses ACTIVE employees and the period-end contract; overlapping non-cancelled payslips remain visible, flagged and nonselectable | ✅ |
+| Rules execute in sequence and snapshot lines/totals using decimal half-up two-decimal rounding | ✅ engine tests + smoke |
+| Worked days/hours reuse schedule and attendance derivation; unpaid days use approved untracked leave types | ✅ |
+| Hard/soft warnings cover contract/salary/currency/rule/duplicate/computation/net and bank data conditions | ✅ warning split smoke |
+| Validation blocks hard warnings; Mark Paid stamps immutable history | ✅ |
+| Payslip PDF is generated server-side with PDFKit and streamed under authenticated scope | ✅ `%PDF` smoke |
+| Send Payslips uses Nodemailer SMTP when configured and deterministic offline JSON transport otherwise | ✅ per-recipient smoke |
+| Recompute is allowed only while DRAFT/COMPUTED | ✅ PAID rejection smoke |
 
-### 4.3 Expected schema (⏳ **placeholder until the team schema arrives** — replace, do not build from this)
+### 4.3 Implemented provisional schema
 
-Likely tables: `salary_structures`, `salary_rules` (name, code, category, sequence, computation method fixed / percentage-of-base / formula, active), `salary_structure_rules` (ordering) or `structure_id` on rules, `payruns` (name, structure, period_start, period_end, status, created_by, validated_at, paid_at), `payslips` (payrun, employee, contract, period, status, worked_days, gross, net), `payslip_lines` (payslip, rule, category, sequence, amount), `employee_bank_details` (for the "missing bank account" warning). `RoleName` enum gains `HR_PAYROLL_USER`.
+The isolated `20260905010000_phase_3_payroll` migration implements six application tables: `salary_structures`, direct one-to-many `salary_rules.salary_structure_id`, `employee_bank_details`, `payruns`, `payslips`, and `payslip_lines`. It adds `SalaryRuleCategory`, `SalaryRuleMethod`, `SalaryRuleBase`, and `PayrunStatus`, plus all remaining `RoleName` literals. Payruns own the selected structure; payslips and lines snapshot calculation history; payslip status is derived from the payrun. Full columns, relations, indexes, delete behavior, and reconciliation points are in `docs/phase-3-plan.md` §3 and §12.
 
-Translation rules for MySQL/Prisma are the same as `docs/phase-1-plan.md` §4.1.
+This is implemented—not a placeholder—but remains **provisional**. When authoritative team SQL arrives, compare every table/column/constraint and reconcile through a later migration without erasing consumed migration history.
 
 ### 4.4 Backend checklist
 
 | Step | Status |
 |---|---|
-| Extend `RoleName` enum + migration; seed role | ⏳ |
-| Add permissions `payroll:read`, `payruns:write`, `payslips:write`, `salary-config:read` and assign to the new role (superset of HR_MANAGER) | ⏳ |
-| Modules `payruns`, `payslips`, `salary-structures` (read), `salary-rules` (read) | ⏳ |
-| Rule engine (`modules/payroll/engine.ts`): sequence executor, categories, base resolution, **safe formula evaluator (no `eval`)** | ⏳ |
-| PDF + email services | ⏳ |
-| Seed: one structure ("Regular Salary": Basic, HRA, Standard Allowance, PF, Professional Tax, ESIC, Gross, Net), one computed payrun for last month | ⏳ |
-| Smoke checks: wizard, compute, warnings, transitions, role scoping (HR_MANAGER gets 403 on payroll) | ⏳ |
+| Payroll migration, all role enum values, idempotent role rows | ✅ fresh MySQL 8.4.9 applied both migrations; 21 exposed tables |
+| Four payroll permissions and released `HR_PAYROLL_USER` HR superset | ✅ unit tests + live lower-role 403s |
+| Read modules for structures/rules; lifecycle modules for payruns/payslips | ✅ typecheck + 84/84 smoke |
+| Safe decimal rule engine with bounded parser and no `eval` | ✅ 81/81 tests |
+| Scoped PDF + Nodemailer SMTP/offline JSON services | ✅ live PDF/send smoke |
+| Regular Salary, eight rules, bank-warning data, payroll login, computed prior-month payrun | ✅ seed passed twice idempotently |
+| Full P1/P2/P3 regression and role boundary checks | ✅ 84/84 smoke |
 
-### 4.5 Frontend checklist — all ❌ (screens in 4.1).
+### 4.5 Frontend checklist ✅
+
+All seven Phase 3 routes in §4.1 are implemented with permission-driven navigation/actions, Promise-based Next.js 16 dynamic params, Suspense around URL-backed lists, TanStack Query, and authenticated refresh-aware blob downloads. `npx tsc --noEmit` and `npm run lint` passed; the Next.js 16.3.4 Webpack production build completed 23/23 static page generation and emitted every payroll route. No browser-only manual click-through was recorded; matching workflows are covered by live API smoke.
 
 ---
 
@@ -277,7 +280,7 @@ Translation rules for MySQL/Prisma are the same as `docs/phase-1-plan.md` §4.1.
 
 **Access (sketch ④):** CRUD access, "similar to HR Payroll User" plus **read & write on payroll records and config**: full CRUD on Payruns, Payslips, Salary Structures, Salary Rules. Full control over HR and payroll-related records.
 
-> Ordering note: Phase 3 payslips cannot be computed without structures and rules existing. Recommendation 📝: land the **Phase 3 + 4 schema together**; Phase 3 wires read-only access, Phase 4 adds the write side and the dashboard.
+> Ordering note: Phase 3 provisionally landed the read/calculation schema and direct structure-to-rule model required for payslips. Phase 4 adds configuration writes, DRAFT hard-delete, and the dashboard; reconcile both phases with authoritative team SQL when supplied.
 
 ### 5.1 Mockup screens (section 5 "Payroll Configuration" and 6 "Payroll Dashboard")
 
@@ -303,7 +306,7 @@ Translation rules for MySQL/Prisma are the same as `docs/phase-1-plan.md` §4.1.
 
 | Step | Status |
 |---|---|
-| `RoleName` + `HR_PAYROLL_MANAGER`; permissions `salary-config:write`, `payruns:delete`, `payslips:delete` | ⏳ |
+| Release existing `HR_PAYROLL_MANAGER` enum/role row; add permissions `salary-config:write`, `payruns:delete`, `payslips:delete` | ⏳ |
 | Write endpoints for structures/rules; delete/cancel for payruns & payslips | ⏳ |
 | `modules/dashboard` aggregate queries (`GET /dashboard/payroll?from&to&departmentId&contractType`) | ⏳ |
 | Smoke checks incl. HR_PAYROLL_USER 403 on config writes | ⏳ |
@@ -338,7 +341,7 @@ Translation rules for MySQL/Prisma are the same as `docs/phase-1-plan.md` §4.1.
 
 | Step | Status |
 |---|---|
-| `RoleName` + `ADMIN`; `ADMIN` = all permissions | ⏳ |
+| Release existing `ADMIN` enum/role row with all permissions | ⏳ |
 | Move / share `users:manage`; add `roles:read`, optional `permissions:write` if permissions become data-driven | ⏳ |
 | Seed first admin from env (`SEED_ADMIN_USERNAME/PASSWORD`) | ⏳ |
 | Smoke: admin CRUD across modules, self-role-change blocked | ⏳ |
@@ -351,11 +354,12 @@ Translation rules for MySQL/Prisma are the same as `docs/phase-1-plan.md` §4.1.
 |---|---|---|
 | Frontend shell + auth + typed API client (unblocks every phase's UI) | ✅ | FE-1…FE-6 verified |
 | Phase 1–2 screens (§2.7) | ✅ | combined P1/P2 gate passed |
-| vitest rule tests (backend) | ✅ | 68/68 tests in 4 files |
+| Phase 3 payroll backend + screens (§4) | ✅ | 81 tests, 84/84 smoke, Webpack build/typecheck/lint |
+| vitest rule tests (backend) | ✅ | 81/81 tests in 5 files |
 | OpenAPI / Postman collection | ❌ | |
 | `package.json` scripts aligned with README | ✅ | Prisma/typecheck/test/smoke/build scripts verified |
 | Deployment story (Docker for API + MySQL, Vercel or Node host for Next.js) | ❌ | |
-| Representative dataset incl. payroll (PDF deliverable 1) | 🟡 HR data seeded; payroll seed ⏳ |
+| Representative dataset incl. payroll (PDF deliverable 1) | 🟡 | Phase 3 payroll seed is present; final P6-3 expansion (including broader/two-payrun demo data) remains pending |
 | Demo script — scenario A: employee → contract → schedule → attendance → payrun → payslip PDF; scenario B: leave type → allocation (balance) → request → approval → balance consumed (PDF deliverable 2) | ❌ | scenario B is fully supported by the API today |
 | Future roadmap summary (PDF deliverable 3) | ❌ | multi-role users, hours-based leave, biometric source, SSO, audit log |
 
@@ -367,16 +371,17 @@ Translation rules for MySQL/Prisma are the same as `docs/phase-1-plan.md` §4.1.
 |---|---|---|---|
 | 1 | README ↔ `package.json` scripts | ✅ Resolved; documented scripts exist and backend build regenerates Prisma | Keep aligned as scripts change |
 | 2 | Prisma pinned to 6.19.3 | ✅ README updated; do **not** upgrade mid-hackathon | Revisit only with a planned migration |
-| 3 | `RoleName` enum changes need a migration per phase | Each phase adds a migration; existing rows unaffected | One migration per phase |
+| 3 | `RoleName` enum changes | ✅ All remaining literals landed together in the isolated Phase 3 migration; permissions still control release | Reconcile only if authoritative SQL requires a different enum strategy |
 | 4 | Single role per user vs mockup multi-role | Affects `users`, JWT payload, permission checks | Keep single role unless the Phase 5 schema adds `user_roles` |
-| 5 | Who owns user management now (HR_MANAGER) vs later (ADMIN) | Permission map change in Phase 5 | HR_MANAGER keeps create-EMPLOYEE-login only; ADMIN gets everything |
-| 6 | Salary structure link on contract (mockup) vs on payrun (PDF) | Schema shape for Phase 3/4 | Structure chosen on the payrun; optional default on contract |
-| 7 | Formula rules ("Python code" in mockup) | Security: never `eval` user input | Small whitelisted expression evaluator over categories/rules/inputs |
-| 8 | Bank details for "missing bank account" warning | No table today | Expect `employee_bank_details` in the Phase 3 schema |
+| 5 | Who owns user management now (HR_MANAGER) vs later (ADMIN) | Permission map change in Phase 5 | HR_MANAGER keeps current released-role management; ADMIN policy lands in Phase 5 |
+| 6 | Salary structure link on contract vs payrun | 📝 Provisionally resolved to structure-on-payrun; authoritative SQL may differ | Preserve the run snapshot and define precedence if a contract default arrives |
+| 7 | Formula rules ("Python code" in mockup) | ✅ Implemented as a bounded deterministic parser; arbitrary code is rejected | Never use `eval`; version syntax before extending it |
+| 8 | Bank details for warning generation | 📝 Provisional `employee_bank_details` exists with warning seed data; production masking/encryption policy remains | Reconcile fields/security with authoritative SQL before production |
 | 9 | Time off spanning years is rejected | Payroll unpaid-leave deduction across year boundary edge case | Keep for hackathon |
-| 10 | No persistent MySQL on the dev machine | ✅ Ephemeral MySQL 8.4.9 migration/seed/smoke verified | Use `npm run db:ephemeral` or Docker |
-| 11 | Next.js 16 builder behavior | P1/P2 Webpack build is green; default Turbopack exits abnormally on this Windows host | Keep `npm run build -- --webpack` as the verified gate and revisit after Next/toolchain updates |
+| 10 | No persistent MySQL on the dev machine | ✅ Ephemeral MySQL 8.4.9 applied both migrations, seed twice, and passed 84/84 smoke | Use `npm run db:ephemeral` or Docker |
+| 11 | Next.js 16 builder behavior | P1/P2/P3 Webpack build is green; the prior Turbopack attempt exited `-1` without diagnostics on this Windows host | Keep `npm run build -- --webpack` as the verified gate and revisit after toolchain updates |
 | 12 | Deactivation/role-change token window | Existing access JWTs retain active/role claims until expiry | Backend token-version or per-request user checks are future hardening |
+| 13 | Dependency audit | `npm install` reported 5 vulnerabilities (1 moderate, 4 high) | Review with compatibility testing; do not run `npm audit fix --force` unreviewed |
 
 ---
 
@@ -406,7 +411,8 @@ the status tables here in sync as steps land.
 | 1 | ✅ Package scripts, README alignment and Prisma pin | Complete |
 | 2 | ✅ Frontend foundation: shell, auth, API client, shared primitives and attendance widget | Complete |
 | 3 | ✅ Phase 1 EMPLOYEE and Phase 2 HR_MANAGER screens | Combined gate passed |
-| 4 | ✅ Vitest regression suite and full seeded smoke | 68 unit tests; 57/57 smoke |
-| 5 | **Next:** P3-0 schema intake, then Phase 3/4 migration → permissions → structures/rules → payruns/payslips → engine → PDF/email → dashboard | P3–P5 remain blocked on the team schema or an explicit provisional-schema decision |
-| 6 | Phase 5 (ADMIN): role, user-management policy, permission matrix | After payroll role/schema work |
-| 7 | OpenAPI, deployment, demo script, payroll seed and roadmap | Final deliverables/hardening |
+| 4 | ✅ Current regression suite and seeded smoke | 81/81 unit tests; 84/84 smoke |
+| 5 | ✅ Phase 3 HR_PAYROLL_USER: provisional migration, permissions, engine, payruns/payslips, PDF/mail and frontend | Combined P1/P2/P3 gate passed; authoritative SQL reconciliation remains a risk |
+| 6 | **Next: P4-1**, then Phase 4 config-write permissions/endpoints and payroll dashboard | Phase 3 read/calculation foundation is complete; Phase 4 role remains unreleased |
+| 7 | Phase 5 (ADMIN): role, user-management policy, permission matrix | After payroll-manager work |
+| 8 | OpenAPI, deployment, demo script, representative-data expansion and roadmap | Final deliverables/hardening |

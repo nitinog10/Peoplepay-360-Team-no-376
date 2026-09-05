@@ -13,32 +13,40 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { sessionKey, useSession } from "@/lib/auth/session";
-import { api, employeeKeys, userKeys, type CreateUserBody, type ManagedUser, type RoleName, type UpdateUserBody } from "@/lib/api";
+import { api, employeeKeys, userKeys, type CreateUserBody, type ManagedUser, type UpdateUserBody } from "@/lib/api";
 
 const username = z.string().trim().min(3).max(50).regex(/^[a-zA-Z0-9._@-]+$/, "Username may contain letters, numbers, dots, underscores, @ and dashes");
+const assignableRole = z.enum(["EMPLOYEE", "HR_MANAGER", "HR_PAYROLL_USER"]);
 const createSchema = z.object({
   employeeId: z.string().min(1, "Select an employee"),
   username,
   password: z.string().min(8).max(200),
-  role: z.enum(["EMPLOYEE", "HR_MANAGER"]),
+  role: assignableRole,
   isActive: z.boolean(),
 });
 const editSchema = z.object({
   employeeId: z.string(),
   username,
   password: z.string().max(200).refine((value) => value.length === 0 || value.length >= 8, "Password must be at least 8 characters"),
-  role: z.enum(["EMPLOYEE", "HR_MANAGER"]),
+  role: assignableRole,
   isActive: z.boolean(),
 });
 
 type Values = z.infer<typeof createSchema>;
+type AssignableRole = Values["role"];
+
+function roleLabel(role: AssignableRole): string {
+  if (role === "HR_MANAGER") return "HR Manager";
+  if (role === "HR_PAYROLL_USER") return "HR Payroll User";
+  return "Employee";
+}
 
 function defaults(user?: ManagedUser): Values {
   return {
     employeeId: user ? String(user.employeeId) : "",
     username: user?.username ?? "",
     password: "",
-    role: user?.role ?? "EMPLOYEE",
+    role: user && ["EMPLOYEE", "HR_MANAGER", "HR_PAYROLL_USER"].includes(user.role) ? user.role as AssignableRole : "EMPLOYEE",
     isActive: user?.isActive ?? true,
   };
 }
@@ -141,10 +149,10 @@ export function UserFormDialog({ user, trigger }: { user?: ManagedUser; trigger:
             <FormGrid>
               <Field name="role" label="Role" required>
                 {(control) => (
-                  <Select value={selectedRole} onValueChange={(value) => form.form.setValue("role", value as RoleName, { shouldDirty: true, shouldValidate: true })}>
+                  <Select value={selectedRole} onValueChange={(value) => form.form.setValue("role", value as AssignableRole, { shouldDirty: true, shouldValidate: true })}>
                     <SelectTrigger {...control} className="w-full"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {(roles.data?.data ?? []).map((role) => <SelectItem key={role.roleId} value={role.roleName}>{role.roleName === "HR_MANAGER" ? "HR Manager" : "Employee"}</SelectItem>)}
+                      {(roles.data?.data ?? []).map((role) => <SelectItem key={role.roleId} value={role.roleName}>{roleLabel(role.roleName as AssignableRole)}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 )}

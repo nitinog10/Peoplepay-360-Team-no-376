@@ -63,7 +63,7 @@ export interface ValidationDetail {
 
 // ---------- enums (prisma/schema.prisma) ----------
 
-export type RoleName = "EMPLOYEE" | "HR_MANAGER";
+export type RoleName = "EMPLOYEE" | "HR_MANAGER" | "HR_PAYROLL_USER" | "HR_PAYROLL_MANAGER" | "ADMIN";
 export type EmployeeStatus = "ACTIVE" | "INACTIVE" | "TERMINATED";
 export type ContractType = "PERMANENT" | "FIXED_TERM" | "INTERNSHIP" | "CONTRACTOR";
 export type ContractStatus = "ACTIVE" | "EXPIRED" | "TERMINATED";
@@ -95,6 +95,7 @@ export const PERMISSIONS = [
   "attendance:read", "attendance:punch", "attendance:write",
   "leave-balances:read", "leave-balances:write",
   "time-off:read", "time-off:request", "time-off:decide",
+  "payroll:read", "payruns:write", "payslips:write", "salary-config:read",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -432,4 +433,219 @@ export interface TimeOffRequest {
   employee: EmployeeRef & { department: DepartmentRef | null };
   leaveType: LeaveTypeRef;
   approval: TimeOffApproval | null;
+}
+
+// ---------- Phase 3 payroll ----------
+
+export type SalaryRuleCategory = "BASIC" | "ALLOWANCE" | "GROSS" | "DEDUCTION" | "NET";
+export type SalaryRuleMethod = "FIXED" | "PERCENTAGE" | "FORMULA";
+export type SalaryRuleBase = "CONTRACT_WAGE" | "BASIC" | "GROSS";
+export type PayrunStatus = "DRAFT" | "COMPUTED" | "VALIDATED" | "PAID" | "CANCELLED";
+export type WarningSeverity = "HARD" | "SOFT";
+
+export interface SalaryStructureFields {
+  salaryStructureId: number;
+  name: string;
+  description: string | null;
+  currency: string;
+  isActive: boolean;
+  createdAt: DateTimeString;
+  updatedAt: DateTimeString;
+}
+
+export type SalaryStructureRef = Pick<SalaryStructureFields, "salaryStructureId" | "name" | "currency">;
+
+export interface SalaryRule {
+  salaryRuleId: number;
+  salaryStructureId: number;
+  name: string;
+  code: string;
+  category: SalaryRuleCategory;
+  sequence: number;
+  method: SalaryRuleMethod;
+  fixedAmount: number | null;
+  percentage: number | null;
+  percentageBase: SalaryRuleBase | null;
+  formula: string | null;
+  isActive: boolean;
+  createdAt: DateTimeString;
+  updatedAt: DateTimeString;
+}
+
+export interface SalaryRuleListItem extends SalaryRule {
+  salaryStructure: SalaryStructureRef & Pick<SalaryStructureFields, "isActive">;
+}
+
+export interface SalaryStructureListItem extends SalaryStructureFields {
+  ruleCount: number;
+  payrunCount: number;
+}
+
+export interface SalaryStructureDetail extends SalaryStructureListItem {
+  rules: SalaryRule[];
+}
+
+export interface PayrollEmployee extends EmployeeRef {
+  jobTitle: string | null;
+  department: DepartmentRef | null;
+}
+
+export type PayrunActor = Pick<EmployeeRef, "employeeId" | "firstName" | "lastName" | "email">;
+
+export interface PayslipFields {
+  payslipId: number;
+  payrunId: number;
+  employeeId: number;
+  contractId: number;
+  contractWage: number;
+  currency: string;
+  expectedDays: number;
+  workedDays: number;
+  unpaidDays: number;
+  expectedHours: number;
+  workedHours: number;
+  basic: number;
+  allowances: number;
+  gross: number;
+  deductions: number;
+  net: number;
+  computedAt: DateTimeString | null;
+  createdAt: DateTimeString;
+  updatedAt: DateTimeString;
+}
+
+export interface PayrunFields {
+  payrunId: number;
+  salaryStructureId: number;
+  name: string;
+  periodStart: DateString;
+  periodEnd: DateString;
+  currency: string;
+  status: PayrunStatus;
+  createdBy: number;
+  computedAt: DateTimeString | null;
+  validatedBy: number | null;
+  validatedAt: DateTimeString | null;
+  paidBy: number | null;
+  paidAt: DateTimeString | null;
+  cancelledBy: number | null;
+  cancelledAt: DateTimeString | null;
+  cancelReason: string | null;
+  createdAt: DateTimeString;
+  updatedAt: DateTimeString;
+}
+
+export interface PayrunTotals {
+  gross: number;
+  deductions: number;
+  net: number;
+}
+
+export interface PayrunListItem extends PayrunFields {
+  salaryStructure: SalaryStructureRef;
+  payslips: Array<Pick<PayslipFields, "gross" | "deductions" | "net">>;
+  payslipCount: number;
+  totals: PayrunTotals;
+}
+
+export interface PayrunPayslipSummary extends PayslipFields {
+  employee: PayrollEmployee;
+}
+
+export interface PayrunDetail extends PayrunFields {
+  salaryStructure: SalaryStructureFields;
+  creator: PayrunActor;
+  validator: PayrunActor | null;
+  payer: PayrunActor | null;
+  canceller: PayrunActor | null;
+  payslips: PayrunPayslipSummary[];
+  payslipCount: number;
+  totals: PayrunTotals;
+}
+
+export interface EligibleEmployee extends PayrollEmployee {
+  contract: {
+    contractId: number;
+    contractType: ContractType;
+    startDate: DateString;
+    endDate: DateString | null;
+    baseSalary: number;
+    currency: string;
+  } | null;
+  duplicate: {
+    payslipId: number;
+    payrun: Pick<PayrunFields, "payrunId" | "name" | "status" | "periodStart" | "periodEnd">;
+  } | null;
+  flags: Array<{ code: string; message: string }>;
+  selectable: boolean;
+}
+
+export interface EligibilityResponse {
+  structure: SalaryStructureFields;
+  period: { from: DateString; to: DateString };
+  data: EligibleEmployee[];
+}
+
+export interface PayrollWarning {
+  code: string;
+  severity: WarningSeverity;
+  message: string;
+  employeeId?: number;
+  payslipId?: number;
+  details?: unknown;
+}
+
+export interface PayrunWarnings {
+  hard: PayrollWarning[];
+  soft: PayrollWarning[];
+  counts: { hard: number; soft: number; total: number };
+}
+
+export interface PayslipLine {
+  payslipLineId: number;
+  payslipId: number;
+  salaryRuleId: number;
+  ruleName: string;
+  ruleCode: string;
+  category: SalaryRuleCategory;
+  sequence: number;
+  method: SalaryRuleMethod;
+  fixedAmount: number | null;
+  percentage: number | null;
+  percentageBase: SalaryRuleBase | null;
+  formula: string | null;
+  amount: number;
+  createdAt: DateTimeString;
+}
+
+export interface PayslipPayrunRef extends PayrunFields {
+  salaryStructure: SalaryStructureRef;
+}
+
+export interface PayslipListItem extends PayslipFields {
+  employee: PayrollEmployee;
+  payrun: PayslipPayrunRef;
+  status: PayrunStatus;
+  periodStart: DateString;
+  periodEnd: DateString;
+  salaryStructure: SalaryStructureRef;
+}
+
+export interface PayslipDetail extends PayslipListItem {
+  contract: Pick<ContractRow, "contractId" | "contractType" | "startDate" | "endDate">;
+  lines: PayslipLine[];
+  groups: Record<SalaryRuleCategory, PayslipLine[]>;
+  totals: { basic: number; allowances: number; gross: number; deductions: number; net: number };
+}
+
+export interface SendPayslipsResult {
+  transport: "smtp" | "json";
+  results: Array<{
+    employeeId: number;
+    payslipId: number;
+    email: string;
+    success: boolean;
+    messageId?: string;
+    error?: string;
+  }>;
 }

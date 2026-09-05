@@ -29,6 +29,8 @@
     "express": "^5.2.1",
     "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.3",
+    "nodemailer": "10.0.0",
+    "pdfkit": "0.20.2",
     "pino": "^10.3.1",
     "pino-http": "^11.0.0",
     "zod": "^4.5.4"
@@ -40,6 +42,8 @@
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^26.4.1",
+    "@types/nodemailer": "8.0.1",
+    "@types/pdfkit": "0.17.6",
     "@types/supertest": "^7.2.1",
     "mysql-memory-server": "^1.16.0",
     "pino-pretty": "^13.1.3",

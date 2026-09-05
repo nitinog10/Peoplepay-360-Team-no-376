@@ -16,6 +16,6 @@ export function useCan(): {
   canAny: (permissions: readonly Permission[]) => boolean;
   isHr: boolean;
 } {
-  const { can, canAny, role } = useSession();
-  return { can, canAny, isHr: role === "HR_MANAGER" };
+  const { can, canAny } = useSession();
+  return { can, canAny, isHr: can("employees:write") };
 }

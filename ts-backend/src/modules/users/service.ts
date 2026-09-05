@@ -1,5 +1,5 @@
 import type { Prisma } from '../../generated/prisma/client';
-import type { RoleName } from '../../generated/prisma/enums';
+import { ASSIGNABLE_ROLE_NAMES, type AssignableRoleName } from '../../auth/permissions';
 import { BusinessRuleError, ConflictError, NotFoundError } from '../../lib/errors';
 import { listResponse, toOrderBy, toSkipTake } from '../../lib/http';
 import { prisma } from '../../lib/prisma';
@@ -18,14 +18,17 @@ function present(user: Prisma.UserGetPayload<{ include: typeof include }>) {
   return { ...rest, role: user.role.roleName };
 }
 
-async function roleIdFor(role: RoleName): Promise<number> {
+async function roleIdFor(role: AssignableRoleName): Promise<number> {
   const row = await prisma.role.findUnique({ where: { roleName: role } });
   if (!row) throw new NotFoundError('Role', role);
   return row.roleId;
 }
 
 export async function listRoles() {
-  return prisma.role.findMany({ orderBy: { roleId: 'asc' } });
+  return prisma.role.findMany({
+    where: { roleName: { in: [...ASSIGNABLE_ROLE_NAMES] } },
+    orderBy: { roleId: 'asc' },
+  });
 }
 
 export async function list(query: ListUsersQuery) {
