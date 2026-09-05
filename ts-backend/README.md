@@ -1,6 +1,6 @@
 # PeoplePay360 API (ts-backend)
 
-Express 5 + TypeScript REST API backed by MySQL 8 through Prisma 7.
+Express 5 + TypeScript REST API backed by MySQL 8 through Prisma 6.19.3 (pinned — do not upgrade mid-hackathon).
 Phase 1 covers the **EMPLOYEE** and **HR_MANAGER** roles: employees, departments,
 work schedules, contracts, attendance, leave types, leave balances and time off.
 
@@ -21,7 +21,7 @@ npm run dev                   # http://localhost:8000/api/v1
 |---|---|
 | Existing MySQL 8 | Set `DATABASE_URL="mysql://USER:PASSWORD@HOST:3306/peoplepay360"` (database must exist). |
 | Docker | `docker compose up -d` (MySQL 8.4 on 3306, root/root, database `peoplepay360`). |
-| No MySQL installed | `EPHEMERAL_PORT=3307 npx tsx scripts/ephemeral-db.ts --serve` downloads a MySQL 8.4 binary, migrates, seeds and keeps running. Then start the API with `DATABASE_URL=mysql://root@127.0.0.1:3307/peoplepay360 npm run dev`. Requires the Microsoft Visual C++ 2015-2022 x64 runtime. |
+| No MySQL installed | `npm run db:ephemeral` (`EPHEMERAL_PORT=3307` to pin the port) downloads a MySQL 8.4 binary, migrates, seeds and keeps running. Then start the API with `DATABASE_URL=mysql://root@127.0.0.1:3307/peoplepay360 npm run dev`. Requires the Microsoft Visual C++ 2015-2022 x64 runtime. |
 
 Schema changes: edit `prisma/schema.prisma`, then `npm run prisma:migrate -- --name <change>`.
 
@@ -91,5 +91,7 @@ and 422 business-rule violations.
 |---|---|
 | `npm run dev` / `build` / `start` | tsx watch / `prisma generate && tsc` / run `dist` |
 | `npm run typecheck` | `tsc --noEmit` |
-| `npx tsx scripts/ephemeral-db.ts [--serve]` | Throwaway MySQL: migrate, verify tables (and seed + stay up with `--serve`) |
-| `API_URL=http://localhost:8000/api/v1 npx tsx scripts/smoke.ts` | End-to-end smoke test against a seeded API |
+| `npm run prisma:generate` / `prisma:migrate` / `prisma:deploy` / `prisma:seed` | `prisma generate` / `migrate dev` / `migrate deploy` / `db seed` |
+| `npm test` / `npm run test:watch` | vitest — unit tests for the pure rules (no database) |
+| `npm run db:ephemeral` | Throwaway MySQL: migrate, verify tables, seed and stay up (`EPHEMERAL_PORT` pins the port) |
+| `npm run smoke` | End-to-end smoke test against a seeded API (`API_URL` defaults to `http://localhost:8000/api/v1`) |

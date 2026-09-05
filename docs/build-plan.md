@@ -7,6 +7,13 @@ exists**; this file is the queue of **what to build next, in the order to build 
 Written 2026-09-05 against this repo state: Phase 1–2 backend ✅ (57/57 smoke), `frontend/` still the
 untouched Next.js 16 boilerplate with no `node_modules`, Phase 3–5 schema not yet received.
 
+**Updated 2026-09-05 (later the same day).** Two sessions ran against this queue — **session 1 = P0**
+(P0-1, P0-2, P0-3), **session 2 = FE** (FE-1 … FE-6). All nine steps are ticked on the board below and
+each step block now carries a `Done` line saying how its gate was proved. The file inventory, every
+deviation from the plan as written, and the browser walk-throughs a human still has to click are in
+[§ What shipped: the P0 and FE sessions](#what-shipped-the-p0-and-fe-sessions-2026-09-05) at the end of
+this file. Nothing in P1/P2 is blocked any more; **P1-1 and P2-1 are the next steps.**
+
 ## How to use this file
 
 1. **Work top to bottom.** No step depends on a step below it.
@@ -22,16 +29,19 @@ untouched Next.js 16 boilerplate with no `node_modules`, Phase 3–5 schema not 
 
 ## Commands (verified against this repo)
 
+Every `ts-backend` row below is a real npm script as of P0-1 — the old `npx …` spellings are gone.
+
 | Where | Command |
 |---|---|
-| `ts-backend` typecheck | `npx tsc --noEmit` (after P0-1: `npm run typecheck`) |
-| `ts-backend` migrate | `npx prisma migrate dev --name <change>` |
-| `ts-backend` apply + seed | `npx prisma migrate deploy && npx prisma db seed` |
+| `ts-backend` typecheck | `npm run typecheck` |
+| `ts-backend` migrate | `npm run prisma:migrate -- --name <change>` |
+| `ts-backend` apply + seed | `npm run prisma:deploy && npm run prisma:seed` |
 | `ts-backend` run | `npm run dev` → `http://localhost:8000/api/v1` |
-| `ts-backend` throwaway DB | `EPHEMERAL_PORT=3307 npx tsx scripts/ephemeral-db.ts --serve` |
-| `ts-backend` smoke | `API_URL=http://localhost:8000/api/v1 npx tsx scripts/smoke.ts` (57/57 today) |
+| `ts-backend` throwaway DB | `npm run db:ephemeral` (`EPHEMERAL_PORT=3307` pins the port). This machine's baseline — no Docker, no local MySQL; see the comment at the top of `.env` |
+| `ts-backend` unit tests | `npm test` — 68 tests in 4 files, no database (P0-3) |
+| `ts-backend` smoke | `npm run smoke` (`API_URL` defaults to localhost:8000) — 57/57, re-verified after P0 and again after FE |
 | `frontend` install / run | `npm install` · `npm run dev` → `http://localhost:3000` |
-| `frontend` verify | `npm run build` · `npm run lint` |
+| `frontend` verify | `npx tsc --noEmit` · `npm run lint` · `npm run build` — all three green after FE-6 |
 
 ## The API contract every screen codes against (verified in source)
 
@@ -53,16 +63,16 @@ Legend: ❌ not started · 🟡 in progress · ✅ done and gate passed.
 | Step | What | Size | Needs | Status |
 |---|---|---|---|---|
 | **P0** | **Foundation & DX** | | | |
-| P0-1 | npm scripts + README alignment | S | — | ❌ |
-| P0-2 | Database up; migrate + seed + smoke re-verified | S | P0-1 | ❌ |
-| P0-3 | vitest harness + unit tests for the pure rules | M | P0-1 | ❌ |
+| P0-1 | npm scripts + README alignment | S | — | ✅ |
+| P0-2 | Database up; migrate + seed + smoke re-verified | S | P0-1 | ✅ |
+| P0-3 | vitest harness + unit tests for the pure rules | M | P0-1 | ✅ |
 | **FE** | **Frontend platform (prerequisite for every phase's UI)** | | | |
-| FE-1 | `npm install` + read the Next.js 16 docs → notes | S | — | ❌ |
-| FE-2 | Toolchain: tokens, UI primitives, Query, RHF + zod | M | FE-1 | ❌ |
-| FE-3 | Typed API client, session, refresh, route guard | L | FE-2 | ❌ |
-| FE-4 | App shell: role-aware nav, header, 403/404 | M | FE-3 | ❌ |
-| FE-5 | Attendance widget (session, clock in/out, breaks) | M | FE-4 | ❌ |
-| FE-6 | Shared list & form primitives (table, filters, fields, kanban) | M | FE-4 | ❌ |
+| FE-1 | `npm install` + read the Next.js 16 docs → notes | S | — | ✅ |
+| FE-2 | Toolchain: tokens, UI primitives, Query, RHF + zod | M | FE-1 | ✅ |
+| FE-3 | Typed API client, session, refresh, route guard | L | FE-2 | ✅ |
+| FE-4 | App shell: role-aware nav, header, 403/404 | M | FE-3 | ✅ |
+| FE-5 | Attendance widget (session, clock in/out, breaks) | M | FE-4 | ✅ |
+| FE-6 | Shared list & form primitives (table, filters, fields, kanban) | M | FE-4 | ✅ |
 | **P1** | **Phase 1 — ① EMPLOYEE screens** | | | |
 | P1-1 | My Space dashboard (`/`) | M | FE-5, FE-6 | ❌ |
 | P1-2 | My profile (read-only employee form) | S | FE-6 | ❌ |
@@ -136,6 +146,13 @@ because P3–P5 all sit behind it; P0/FE/P1/P2 need nothing from it.
   upgrade mid-hackathon)".
 - **Done when** `npm run typecheck` exits 0 and every command in the README's Setup and Scripts tables
   resolves to a real script.
+- ✅ **Done 2026-09-05.** All 12 scripts exist (`dev build start typecheck prisma:generate prisma:migrate
+  prisma:deploy prisma:seed test test:watch smoke db:ephemeral`), `build` is `prisma generate && tsc`,
+  `npm run typecheck` exits 0. README now says "Prisma 6.19.3 (pinned)" and its Setup + Scripts tables
+  use the scripts instead of raw `npx tsx …`. **Beyond the plan:** `prisma.config.ts` lost its
+  config-level `datasource` block and `prisma/schema.prisma` regained `url = env("DATABASE_URL")` —
+  the config-level override is Prisma 7 only, so on 6.19.3 every Prisma CLI command was failing to see
+  the connection string.
 
 ### P0-2 — Database up; migrate, seed and smoke re-verified · S · needs P0-1
 
@@ -147,6 +164,11 @@ because P3–P5 all sit behind it; P0/FE/P1/P2 need nothing from it.
   `npm run smoke`.
 - **Done when** `GET /api/v1/health` returns 200 with `database: "up"` and smoke reports 57/57. Record
   which database option you chose in a comment at the top of `.env`.
+- ✅ **Done 2026-09-05.** Option chosen: the **ephemeral MySQL 8.4** (`npm run db:ephemeral` on 3307) —
+  this machine has neither Docker nor a MySQL server on PATH; the choice and how to swap it for Docker or
+  a real MySQL is recorded in the `.env` header comment. `prisma:deploy` + `prisma:seed` ran clean,
+  `/health` returned `{"status":"ok","database":"up"}` and `npm run smoke` reported **57/57**. Re-run at
+  the end of the FE session: still 57/57, so nothing the frontend did touched the API's behaviour.
 
 ### P0-3 — vitest harness + unit tests for the pure rules · M · needs P0-1
 
@@ -158,6 +180,18 @@ because P3–P5 all sit behind it; P0/FE/P1/P2 need nothing from it.
   `scopeToEmployee` allow **and** deny.
 - **Done when** `npm test` is green and each of those four areas has at least one rejection case, not
   just a happy path. Deferrable to P6-1 if the demo is at risk — don't skip both.
+- ✅ **Done 2026-09-05.** `npm test` → **68 tests, 4 files, all passing** in ~0.5 s with no database.
+  Rejection cases per area: attendance (second clock-in, clock-out during a break, break-end with no
+  break, clock-out with no session, session left open on a past day), schedules (`end ≤ start` yielding a
+  non-positive span — the 400 the service raises — and a non-ISO weekday payload yielding no working
+  days), dates (a string that is not exactly `YYYY-MM-DD`, a calendar date that does not exist, an
+  out-of-range TIME, an unknown timezone), permissions (`scopeToEmployee` refuses an EMPLOYEE reaching for
+  another record **and** an HR_MANAGER with no employee id, while letting HR through unrestricted). **Beyond the plan:** the config file is
+  `vitest.config.mts`, not `.ts` — this package is CommonJS with `module: NodeNext`, so a `.ts` config's
+  `export default` is not loadable; and `src/lib/logger.ts` now skips the pino-pretty transport under
+  `NODE_ENV=test`, because that transport runs in a worker thread and kept `vitest run` alive after the
+  last assertion. The config pins every env var `src/config/env.ts` validates at import time, so a run
+  never depends on a developer's `.env`.
 
 ---
 
@@ -176,6 +210,13 @@ Everything in P1–P5's UI sits on these six steps. Do them in order; don't star
   limits) with the doc path beside each, plus any deprecation notices.
 - **Done when** `npm run dev` serves the boilerplate on :3000 and the notes file covers at least routing,
   data-fetching/caching and middleware with doc paths.
+- ✅ **Done 2026-09-05.** `npm install` (Next 16.3.4, React 19.2.8) and `npm run dev` served :3000.
+  `docs/frontend-notes.md` covers routing and layouts, route groups and private folders, data fetching and
+  caching, `middleware.ts` → **`proxy.ts`**, styling, deprecations that touch this repo, and housekeeping —
+  each section citing the doc path inside `node_modules/next/dist/docs/`. The three findings that shaped
+  every later step: one root layout only (a group layout must not render `<html>`/`<body>`), `params` and
+  `searchParams` are promises in server components, and `useSearchParams()` in a client component needs a
+  `<Suspense>` boundary above it or the whole route leaves the prerender.
 
 ### FE-2 — Toolchain: tokens, UI primitives, Query, forms · M · needs FE-1
 
@@ -190,6 +231,16 @@ Everything in P1–P5's UI sits on these six steps. Do them in order; don't star
   retry 1) plus a toaster.
 - **Done when** `npm run build` and `npm run lint` pass and a scratch page renders Button, Input, Dialog
   and Table with tokens applied in both light and dark.
+- ✅ **Done 2026-09-05.** `npx shadcn@latest init` **did** support Next 16 + Tailwind 4 (shadcn 4.21.0,
+  `radix-nova` style, `components.json` committed), so the primitives are generated rather than hand-rolled:
+  badge, button, card, checkbox, dialog, dropdown-menu, input, label, popover, select, separator, skeleton,
+  sonner, table, tabs, textarea. Installed exactly as listed plus `radix-ui`, `next-themes`, `sonner`,
+  `tw-animate-css`, and `cn` — that last one is shadcn's own class-merge helper, which `lib/utils.ts`
+  re-exports so callers still `import { cn } from "@/lib/utils"`. Tokens live in `app/globals.css` under
+  Tailwind 4's `@theme` (colour, radius, the `topbar`/`content` sizes the shell uses), `app/providers.tsx`
+  holds `QueryClientProvider` (staleTime 30 s, retry 1) + devtools + `next-themes` + the toaster. Gate:
+  `/scratch` renders every primitive, `ThemeToggle` flips light/dark, `npm run build` and `npm run lint`
+  clean.
 
 ### FE-3 — Typed API client, session and route guard · L · needs FE-2
 
@@ -206,6 +257,18 @@ Everything in P1–P5's UI sits on these six steps. Do them in order; don't star
 - **Done when** login works for `hr.manager` and for an employee's work email, a hard reload keeps the
   session, and with `JWT_ACCESS_TTL_MINUTES=1` a stale request refreshes and retries transparently
   (confirm the 401 → refresh → retry trio in the network panel).
+- ✅ **Done 2026-09-05.** Built: `lib/api/{client,types,index,employees,departments,attendance}.ts`,
+  `lib/auth/session.tsx`, `hooks/use-can.ts`, `components/auth/require-session.tsx`,
+  `app/(auth)/{layout.tsx,login/page.tsx}`, `frontend/.env.example` (`NEXT_PUBLIC_API_URL`; `.env.local`
+  is local-only and stays out of git). `client.ts` holds the access token in a module variable, never in
+  storage; a 401 funnels through **one** in-flight `POST /auth/refresh` (a shared promise, so ten parallel
+  queries produce one refresh) and each request retries exactly once; a failed refresh clears the session
+  and pushes `/login`. Bootstrap is `refresh` → `me`, which is what survives a reload. Each `lib/api`
+  module exports query *options* (`api.employees.list(params)`) plus a `*Keys` factory, so screens call
+  `useQuery(api.…)` and invalidate by key. `ApiError` carries `{ status, code, message, details }` and its
+  `fieldErrors(fields)` is what FE-6's forms consume. **Machine-verified:** typecheck, lint and
+  `npm run build` clean. **Human click-through still owed:** the two logins, the hard reload, and the
+  401 → refresh → retry trio in the network panel with `JWT_ACCESS_TTL_MINUTES=1`.
 
 ### FE-4 — App shell: role-aware nav and header · M · needs FE-3
 
@@ -220,6 +283,21 @@ Everything in P1–P5's UI sits on these six steps. Do them in order; don't star
 - **Done when** HR sees the full menu, an employee sees only My Space / Attendance / Time Off / own
   contracts, typing `/departments` as an employee lands on the 403 screen, and logout clears both the
   in-memory token and the refresh cookie.
+- ✅ **Done 2026-09-05.** `app/(app)/layout.tsx` (anonymous → `/login`), `components/shell/sidebar.tsx`,
+  `topbar.tsx` (user name, role chip, theme toggle, logout, and the slot FE-5's widget fills),
+  `components/forbidden.tsx` (`isForbidden`, `Forbidden`, `RequirePermission`), `app/not-found.tsx`,
+  `app/(app)/error.tsx`. The nav is data in `components/shell/nav-config.ts` — **`.ts`, not `.tsx`**, since
+  it is a table, not markup — with a `permission` per entry: Employees on `employees:write`, Departments on
+  `departments:write`, Working Schedules on `work-schedules:write`, Types on `leave-types:write`, while
+  Contracts / Attendance / Time Off / Allocations sit on their `*:read` permission because the API
+  row-scopes those for an employee instead of refusing them. Payroll is declared with an empty child list
+  until P3. **Beyond the plan:** nine `StepPlaceholder` route stubs (`/employees`, `/contracts`,
+  `/departments`, `/work-schedules`, `/attendance`, `/time-off`, `/time-off/requests`,
+  `/time-off/balances`, `/time-off/types`) each naming the step that will replace it — without them the
+  gate's "type `/departments` as an employee" lands on 404 instead of the 403 screen — plus
+  `components/shell/step-placeholder.tsx`, `components/theme-toggle.tsx`, and an `(app)/page.tsx` landing
+  card reading `GET /employees/me/summary` until P1-1 replaces it. **Human click-through still owed:** the
+  HR-vs-employee menu diff, `/departments` as an employee, and logout.
 
 ### FE-5 — Attendance widget · M · needs FE-4
 
@@ -230,6 +308,22 @@ Everything in P1–P5's UI sits on these six steps. Do them in order; don't star
   invalidate attendance queries after every punch; surface the API's 422 text verbatim.
 - **Done when** clock-in → break-start → break-end → clock-out completes from the header, today's row in
   `/attendance` shows matching worked and break hours, and a second clock-in shows the 422 message.
+- ✅ **Done 2026-09-05.** `components/attendance/widget.tsx` + `lib/api/attendance.ts`: reads
+  `GET /attendance/session` and derives its buttons from `state`, with one deliberate exception — Check Out
+  stays live during a break, because the API answers that with "End your break before clocking out", which
+  is more use than a disabled button. A live elapsed timer pauses while a break is open, a green dot marks
+  an open session, every punch invalidates the attendance keys, and each 422 is rendered in the server's own
+  wording. The widget is gated on `attendance:punch`, so it simply does not query for a session it cannot
+  create. **Gate run (33/33 PASS, script driving the same endpoints the widget
+  calls, as the seeded employee `john.dsouza@oxp.com`):** OUT → clock-in → 201/state IN → second clock-in
+  **422 "You are already clocked in"** → break-end with no break 422 → break-start → clock-out during a
+  break 422 → elapsed frozen while ON_BREAK → break-end → clock-out → worked 0.02 h / break 0.01 h, and
+  `GET /attendance/records?date=today` returns exactly one row whose worked and break hours match the
+  widget's, holding all four punches with `source=WEB` and status `PRESENT`. **Deviation:** the gate says
+  "today's row in `/attendance`", but that screen is still a `StepPlaceholder` (it is **P1-3**), so the row
+  was verified through `GET /attendance/records` instead of the list UI. **Human click-through still
+  owed:** the punch sequence from the header, and a second clock-in from a second tab to see the 422 in
+  the widget.
 
 ### FE-6 — Shared list and form primitives · M · needs FE-4
 
@@ -243,6 +337,22 @@ Everything in P1–P5's UI sits on these six steps. Do them in order; don't star
   a generic grouped-column Kanban for P2-1.
 - **Done when** a scratch page lists `/employees` with working search, sort, paging and URL round-trip,
   and a deliberately duplicate department shows the server's message on the name field.
+- ✅ **Done 2026-09-05.** Built `hooks/use-list-params.ts` (**new file, not in the list above** — the URL
+  is the single source of list state, so table, filter bar, pager and kanban all read one hook rather than
+  each holding their own `useState`), `components/data-table.tsx` (columns + a structural `TableQuery<T>`,
+  sortable headers with `aria-sort`, `hideBelow` responsive columns, skeleton / empty / error-retry states,
+  an exported `ListError` the kanban reuses), `components/filter-bar.tsx` (declarative `select | date |
+  text` filters plus search), `components/pagination.tsx` (rows-per-page, an `aria-live` "21–40 of 57"
+  readout, first/prev/next/last), `components/kanban.tsx` (declared groups, so an empty department still
+  renders a column), and `components/form/{use-api-form.ts,field.tsx,form.tsx,index.ts}` —
+  `useApiForm` maps a 400's `details` onto fields by path, a 409's index name back onto the field it
+  belongs to (`departments_department_name_key` → `departmentName`) and puts 409/422 text in the banner,
+  focusing the first field the server objected to. `page/pageSize/sort/order/q` and module filters live in
+  the query string; defaults are pruned so a clean list has a clean URL, and any change except paging
+  returns to page 1. **Machine-verified:** `npx tsc --noEmit`, `npm run lint` and `npm run build` all
+  clean, with `/scratch/lists` prerendering static behind its `<Suspense>` boundary. **Human
+  click-through still owed:** `/scratch/lists` — search, sort a column, page, reload and use Back, then
+  submit the pre-filled duplicate `Engineering` to see the 409 on the name field and in the banner.
 
 ---
 
@@ -701,6 +811,73 @@ Access: everything HR_PAYROLL_USER has, plus write on payroll config and delete 
 - **Done when** every 📝 item in overall plan §8 is either resolved in this build or listed here.
 
 ---
+
+## What shipped: the P0 and FE sessions (2026-09-05)
+
+Two sessions, as asked: **session 1 = P0** (P0-1 → P0-2 → P0-3), **session 2 = FE** (FE-1 → FE-6). Every
+step's own `Done` line above records its gate; this section is the cross-cutting view — how to reproduce
+the state, what files exist now, where the build deviated from the plan as written, and what is left.
+
+### Reproduce the verified state
+
+```bash
+# terminal 1 — the database (this machine has no Docker and no local MySQL)
+cd ts-backend && EPHEMERAL_PORT=3307 npm run db:ephemeral   # migrates + seeds, stays up
+
+# terminal 2 — the API
+cd ts-backend && npm run dev                                # :8000/api/v1, /health → database: up
+cd ts-backend && npm run typecheck && npm test && npm run smoke   # 0 errors · 68 tests · 57/57
+
+# terminal 3 — the frontend
+cd frontend && npx tsc --noEmit && npm run lint && npm run build  # all clean, 14 routes prerendered
+cd frontend && npm run dev                                  # :3000 — log in as hr.manager / ChangeMe123!
+```
+
+Seeded logins are unchanged: `hr.manager` / `ChangeMe123!` for HR, any employee's work email (e.g.
+`aarav.mehta@oxp.com`, `john.dsouza@oxp.com`) / `Employee123!` for EMPLOYEE.
+
+### Files, by area
+
+| Area | Files |
+|---|---|
+| Backend, changed | `package.json` (12 scripts), `README.md` (Prisma 6.19.3 pinned, script-based tables), `prisma.config.ts` + `prisma/schema.prisma` (connection string back in the schema), `src/lib/logger.ts` (no pretty transport under test) |
+| Backend, new | `vitest.config.mts`, `src/auth/permissions.test.ts`, `src/lib/dates.test.ts`, `src/modules/attendance/derive.test.ts`, `src/modules/work-schedules/service.test.ts` |
+| Docs | `docs/frontend-notes.md` (new), this file, `docs/overall-implementation-plan.md` |
+| FE foundation | `app/layout.tsx`, `app/globals.css` (`@theme` tokens), `app/providers.tsx`, `components.json`, `lib/utils.ts`, `components/ui/*` (16 primitives), `components/theme-toggle.tsx`, `.env.example` |
+| FE session & data | `lib/api/{client,types,index,employees,departments,attendance}.ts`, `lib/auth/session.tsx`, `lib/format.ts`, `hooks/use-can.ts`, `components/auth/require-session.tsx`, `app/(auth)/{layout.tsx,login/page.tsx}` |
+| FE shell | `app/(app)/layout.tsx`, `app/(app)/page.tsx`, `app/(app)/error.tsx`, `app/not-found.tsx`, `components/shell/{nav-config.ts,sidebar.tsx,topbar.tsx,step-placeholder.tsx}`, `components/forbidden.tsx`, nine placeholder routes under `app/(app)/` |
+| FE attendance | `components/attendance/widget.tsx` |
+| FE list & form primitives | `hooks/use-list-params.ts`, `components/{data-table,filter-bar,pagination,kanban,page-header,status-badge}.tsx`, `components/form/{use-api-form.ts,field.tsx,form.tsx,index.ts}` |
+| FE dev-only gates | `app/(dev)/layout.tsx`, `app/(dev)/scratch/page.tsx` (FE-2), `app/(dev)/scratch/lists/{page.tsx,lists-scratch.tsx}` (FE-6) |
+
+`frontend/app/page.tsx` (the Next boilerplate) was deleted — `app/(app)/page.tsx` owns `/` now.
+
+### Deviations from the plan as written
+
+| Step | Plan said | What shipped, and why |
+|---|---|---|
+| P0-1 | touch `package.json` + `README.md` only | also `prisma.config.ts` and `prisma/schema.prisma`: the config-level `datasource.url` override is Prisma **7**, so on the pinned 6.19.3 every CLI command ran without a connection string. The URL is back in the schema; `dotenv/config` in the config file is what puts it in scope. |
+| P0-3 | `vitest.config.ts` | `vitest.config.mts` — the package is CommonJS with `module: NodeNext`, so a `.ts` config's `export default` will not load. Also `src/lib/logger.ts` skips pino-pretty under `NODE_ENV=test` (its worker thread kept `vitest run` from exiting). Note `tsconfig.json` excludes `src/**/*.test.ts`, so `npm run typecheck` does not cover the tests — `npm test` is what exercises them. |
+| FE-2 | "try `shadcn init`; hand-roll if Next 16 / Tailwind 4 isn't supported" | init worked (shadcn 4.21.0, `radix-nova`), so the 16 primitives are generated, not hand-rolled. It brings `radix-ui`, `next-themes`, `sonner`, `tw-animate-css` and `cn`; `lib/utils.ts` re-exports `cn` so every import stays `@/lib/utils`. |
+| FE-3 | the file list in the step | added `components/auth/require-session.tsx` (a client guard for pages outside `(app)`, which the dev gate pages use) and `lib/format.ts`. The latter exists because of a real asymmetry in the API: date-only columns come back as UTC-midnight instants, while `?date=` / `?from=` accept only `YYYY-MM-DD`. |
+| FE-4 | `components/shell/nav-config.tsx` | `nav-config.ts` — it is a data table, not markup. Nine `StepPlaceholder` routes were added so every nav link resolves (otherwise the gate's `/departments`-as-employee check hits 404 rather than the 403 screen), plus `step-placeholder.tsx`, `(app)/error.tsx`, `theme-toggle.tsx` and an interim `(app)/page.tsx`. |
+| FE-5 | "today's row in `/attendance` shows matching worked and break hours" | verified through `GET /attendance/records?date=…` instead: `/attendance` is still a placeholder because that screen is **P1-3**. Same assertion, one layer down. |
+| FE-6 | six components + `components/form/*` | added `hooks/use-list-params.ts` (one URL reader for every primitive) and exported `ListError` from `data-table.tsx` for the kanban to reuse. Search submits on Enter / blur rather than debouncing each keystroke — `react-hooks/set-state-in-effect` rules out the usual controlled-input-plus-effect shape, and an uncontrolled input keeps the caret where the user left it. "No filter" in a select is an `__any__` sentinel because Radix reserves `value=""`. Only keys in a module's server-side sort allow-list are marked `sortable`. |
+| FE-6 | — | the gate pages live in a **dev-only `(dev)` route group** (`/scratch`, `/scratch/lists`) outside the authenticated shell. They are not product screens; drop or gate them in P6-5 before anything is deployed. |
+| Decision #6 | "swap the group key in `components/employees/kanban.tsx`" | the kanban shipped generic at `components/kanban.tsx`; the group axis is now the caller's `groupOf` prop, so P2-1 changes one prop rather than a component. |
+
+### What is left
+
+- **Four browser walk-throughs a human has to click** (each is a UI-only assertion no script can stand in
+  for): FE-3's two logins + hard reload + the 401 → refresh → retry trio with `JWT_ACCESS_TTL_MINUTES=1`;
+  FE-4's HR-vs-employee menu diff, `/departments` as an employee, and logout; FE-5's punch sequence from
+  the header including a second clock-in in a second tab; FE-6's `/scratch/lists` — search, sort, page,
+  reload, Back, then submit the pre-filled duplicate `Engineering`.
+- **Nothing is committed.** Every change above sits in the working tree (`git status` lists the modified
+  files, the one deletion and the new directories). The two sessions map cleanly onto two commits — one for
+  P0, one for FE — whenever you want them.
+- **Next steps:** P1-1 and P2-1 are unblocked and independent of each other. P3-0 (payroll schema intake)
+  is still the gate on everything in P3–P5 and needs chasing regardless of UI progress.
 
 ## Decisions this plan makes on your behalf
 

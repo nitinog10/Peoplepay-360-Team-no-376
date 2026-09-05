@@ -1,26 +1,239 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-geist-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+:root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* ─────────────────────────────────────────────────────────────────────────────
+   PeoplePay360 design tokens
+
+   Everything above this line is shadcn's `init` output (radix / nova preset) —
+   leave it alone so a future `shadcn add` diffs cleanly. Everything below is
+   ours: a brand ramp, semantic status colours, a categorical chart palette and
+   the shell metrics. The `:root` / `.dark` blocks here re-declare a handful of
+   shadcn tokens; they win because they come later in the file.
+
+   Why the ramp lives in `:root` and not in `@theme`: Tailwind only emits theme
+   variables that a generated utility references, so a `@theme` value read from
+   hand-written CSS (`--primary: var(--color-brand-600)`) can vanish from the
+   build. Declaring the literals in `:root` and mapping them with `@theme inline`
+   is the same indirection shadcn uses, and it survives tree-shaking.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* Brand ramp — indigo-blue, scheme independent (no `.dark` override). */
+  --brand-50: oklch(0.977 0.014 254);
+  --brand-100: oklch(0.95 0.032 255);
+  --brand-200: oklch(0.906 0.062 255);
+  --brand-300: oklch(0.84 0.1 256);
+  --brand-400: oklch(0.74 0.155 258);
+  --brand-500: oklch(0.64 0.192 260);
+  --brand-600: oklch(0.548 0.21 262);
+  --brand-700: oklch(0.474 0.196 263);
+  --brand-800: oklch(0.404 0.166 264);
+  --brand-900: oklch(0.352 0.132 265);
+  --brand-950: oklch(0.264 0.098 266);
+
+  /* Semantic status colours. Solid fills; badges use them at /10 opacity the
+     way the generated `destructive` variants do. */
+  --success: oklch(0.58 0.14 152);
+  --success-foreground: oklch(0.985 0.01 152);
+  --warning: oklch(0.62 0.145 62);
+  --warning-foreground: oklch(0.985 0.01 62);
+  --info: oklch(0.58 0.15 236);
+  --info-foreground: oklch(0.985 0.01 236);
+
+  /* Brand-tinted interactive surfaces, replacing the preset's achromatic set. */
+  --primary: var(--brand-600);
+  --primary-foreground: oklch(0.985 0.005 262);
+  --ring: var(--brand-500);
+  --sidebar-primary: var(--brand-600);
+  --sidebar-primary-foreground: oklch(0.985 0.005 262);
+  --sidebar-ring: var(--brand-500);
+
+  /* Categorical, not a single-hue ramp — the P4-6 dashboard needs series that
+     stay distinguishable next to each other. */
+  --chart-1: oklch(0.548 0.21 262);
+  --chart-2: oklch(0.6 0.13 185);
+  --chart-3: oklch(0.65 0.16 145);
+  --chart-4: oklch(0.7 0.15 75);
+  --chart-5: oklch(0.6 0.19 15);
+}
+
+.dark {
+  /* Lift the mid-tones so brand fills keep contrast on the dark ground. */
+  --success: oklch(0.72 0.15 152);
+  --success-foreground: oklch(0.16 0.03 152);
+  --warning: oklch(0.78 0.15 70);
+  --warning-foreground: oklch(0.16 0.03 70);
+  --info: oklch(0.72 0.14 236);
+  --info-foreground: oklch(0.16 0.03 236);
+
+  --primary: var(--brand-400);
+  --primary-foreground: oklch(0.17 0.04 264);
+  --ring: var(--brand-500);
+  --sidebar-primary: var(--brand-400);
+  --sidebar-primary-foreground: oklch(0.17 0.04 264);
+  --sidebar-ring: var(--brand-500);
+
+  --chart-1: oklch(0.7 0.16 262);
+  --chart-2: oklch(0.72 0.12 185);
+  --chart-3: oklch(0.76 0.15 145);
+  --chart-4: oklch(0.8 0.14 75);
+  --chart-5: oklch(0.7 0.17 15);
+}
+
+@theme inline {
+  --color-brand-50: var(--brand-50);
+  --color-brand-100: var(--brand-100);
+  --color-brand-200: var(--brand-200);
+  --color-brand-300: var(--brand-300);
+  --color-brand-400: var(--brand-400);
+  --color-brand-500: var(--brand-500);
+  --color-brand-600: var(--brand-600);
+  --color-brand-700: var(--brand-700);
+  --color-brand-800: var(--brand-800);
+  --color-brand-900: var(--brand-900);
+  --color-brand-950: var(--brand-950);
+
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+}
+
+@theme {
+  /* Shell metrics, so the sidebar/topbar widths are stated once. Only ever read
+     through utilities (`w-sidebar`, `h-topbar`), so a plain `@theme` is safe. */
+  --spacing-sidebar: 15rem;
+  --spacing-sidebar-collapsed: 3.5rem;
+  --spacing-topbar: 3.5rem;
+  --spacing-content: 84rem;
 }

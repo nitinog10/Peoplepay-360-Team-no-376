@@ -5,8 +5,17 @@
   "main": "index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
-    "start": "node dist/index.js"
+    "build": "prisma generate && tsc",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:deploy": "prisma migrate deploy",
+    "prisma:seed": "prisma db seed",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "smoke": "tsx scripts/smoke.ts",
+    "db:ephemeral": "tsx scripts/ephemeral-db.ts --serve"
   },
   "keywords": [],
   "type": "commonjs",

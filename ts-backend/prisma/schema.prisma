@@ -9,6 +9,10 @@ generator client {
 
 datasource db {
   provider = "mysql"
+  // Prisma 6.19.3 (pinned) reads the connection string from the schema, not from
+  // prisma.config.ts — that config-level `datasource` override needs Prisma 7.
+  // The runtime pool still parses DATABASE_URL itself in src/lib/prisma.ts.
+  url      = env("DATABASE_URL")
 }
 
 // ---------- Enums (PostgreSQL CHECK constraints → MySQL ENUM) ----------
