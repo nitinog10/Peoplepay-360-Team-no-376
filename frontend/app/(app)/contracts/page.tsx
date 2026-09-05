@@ -1,14 +1,15 @@
+import { Suspense } from "react";
+
+import { ContractsList } from "@/components/contracts/contracts-list";
 import { RequirePermission } from "@/components/forbidden";
-import { StepPlaceholder } from "@/components/shell/step-placeholder";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function ContractsPage() {
   return (
     <RequirePermission permission="contracts:read">
-      <StepPlaceholder
-        title="Contracts"
-        step="P1-5 (own) / P2-3 (HR)"
-        description="Employment contracts with the active one highlighted; an employee sees only their own."
-      />
+      <Suspense fallback={<div className="mx-auto w-full max-w-content px-4 py-8"><Skeleton className="h-72" /></div>}>
+        <ContractsList />
+      </Suspense>
     </RequirePermission>
   );
 }

@@ -1,14 +1,15 @@
+import { Suspense } from "react";
+
+import { WorkSchedulesList } from "@/app/(app)/work-schedules/work-schedules-list";
 import { RequirePermission } from "@/components/forbidden";
-import { StepPlaceholder } from "@/components/shell/step-placeholder";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function WorkSchedulesPage() {
   return (
     <RequirePermission permission="work-schedules:write">
-      <StepPlaceholder
-        title="Working Schedules"
-        step="P2-4"
-        description="Weekday and hour patterns, with weekly hours derived by the API, plus assignment history."
-      />
+      <Suspense fallback={<div className="mx-auto w-full max-w-content px-4 py-8"><Skeleton className="h-72" /></div>}>
+        <WorkSchedulesList />
+      </Suspense>
     </RequirePermission>
   );
 }

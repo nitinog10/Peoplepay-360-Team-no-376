@@ -9,6 +9,8 @@ import {
   LayoutDashboardIcon,
   PlaneIcon,
   TagsIcon,
+  UserCogIcon,
+  UserRoundIcon,
   UsersIcon,
   WalletIcon,
 } from "lucide-react";
@@ -49,12 +51,14 @@ export function isNavGroup(entry: NavEntry): entry is NavGroup {
 
 export const NAV: NavEntry[] = [
   { label: "My Space", href: "/", icon: HouseIcon, exact: true },
+  { label: "My Profile", href: "/employees/me", icon: UserRoundIcon, permission: "employees:read", exact: true },
   {
     label: "Employees",
     icon: UsersIcon,
     children: [
       // The roster itself is HR's; an employee reads their own record at /employees/me.
       { label: "Employees", href: "/employees", icon: UsersIcon, permission: "employees:write" },
+      { label: "Users", href: "/users", icon: UserCogIcon, permission: "users:manage" },
       { label: "Contracts", href: "/contracts", icon: FileTextIcon, permission: "contracts:read" },
       {
         label: "Departments",

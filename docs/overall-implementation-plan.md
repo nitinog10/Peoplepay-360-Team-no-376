@@ -1,6 +1,6 @@
 # PeoplePay360 — Overall Implementation Plan & Status
 
-**Last audited:** 2026-09-05 (code inspected, `tsc --noEmit` run, git history read).
+**Last audited:** 2026-09-05 (P1/P2 combined build, typecheck, lint, unit tests, migration/seed and smoke verified).
 **Companion docs:** `docs/build-plan.md` (**the executable step-by-step queue derived from this file — start there**), `docs/phase-1-plan.md` (detailed schema, rules and API for Phases 1–2), `pp360.txt` (problem statement), `HRMS OXP - 24 hours.excalidraw` (mockup), `ts-backend/README.md` (run instructions).
 
 **Legend**
@@ -34,8 +34,8 @@ The sketch numbers the roles ① → ⑤ and shows the access hierarchy on the b
 
 | Phase | Role (enum value) | Team schema | Backend | Frontend | Plan doc |
 |---|---|---|---|---|---|
-| 1 | ① `EMPLOYEE` | ✅ received 2026-09-05 | ✅ | 🟡 platform ✅ (FE-1…FE-6), screens P1-1…P1-5 ❌ | `docs/phase-1-plan.md` |
-| 2 | ② `HR_MANAGER` | ✅ (same schema as Phase 1) | ✅ | 🟡 platform ✅ (FE-1…FE-6), screens P2-1…P2-10 ❌ | `docs/phase-1-plan.md` |
+| 1 | ① `EMPLOYEE` | ✅ received 2026-09-05 | ✅ | ✅ P1-1…P1-5 implemented; combined P1/P2 gate passed | `docs/phase-1-plan.md` |
+| 2 | ② `HR_MANAGER` | ✅ (same schema as Phase 1) | ✅ | ✅ FE-1…FE-6 and P2-1…P2-10 implemented; combined gate passed | `docs/phase-1-plan.md` |
 | 3 | ③ `HR_PAYROLL_USER` | ⏳ to be given | ⏳ | ❌ | §4 below (scope only) |
 | 4 | ④ `HR_PAYROLL_MANAGER` | ⏳ to be given | ⏳ | ❌ | §5 below (scope only) |
 | 5 | ⑤ `ADMIN` | ⏳ to be given | ⏳ | ❌ | §6 below (scope only) |
@@ -49,21 +49,21 @@ Cross-phase work (frontend shell, tests, docs, demo) is tracked in §7. Open dec
 | Area | State | Evidence |
 |---|---|---|
 | `ts-backend/` app code | ✅ Express 5 + TypeScript 7, 11 modules, layered `router/schema/service` | `src/routes.ts`, `src/modules/*` |
-| Typecheck | ✅ `npx tsc --noEmit` exits 0 | run during this audit |
-| Prisma schema + migration | ✅ 14 tables, 9 enums, `20260905000000_init` | `prisma/schema.prisma`, `prisma/migrations/` |
-| Prisma version | 🟡 **6.19.3** (downgraded from 7.10 in commit `ae76dee` to fix a version conflict). Code works on 6.19; README still says "Prisma 7". | `package.json`, `ts-backend/README.md` |
-| Seed | ✅ roles, 4 departments, 4 leave types, 4 schedules, 9 employees, users, contracts, assignments, balances, 14 days attendance, 5 requests | `prisma/seed.ts` |
-| Smoke test | ✅ 57 checks reported passing against MySQL 8.4 on 2026-09-05 | `scripts/smoke.ts` |
-| Unit tests (vitest) | ❌ none (`*.test.ts` count = 0; vitest is installed) | — |
+| Typecheck | ✅ backend `npm run typecheck`; frontend `npx tsc --noEmit` | combined P1/P2 gate |
+| Prisma schema + migration | ✅ 14 application tables, 9 enums, `20260905000000_init` | `prisma/schema.prisma`, `prisma/migrations/` |
+| Prisma version | ✅ **6.19.3 pinned**; README and scripts aligned | `package.json`, `ts-backend/README.md` |
+| Seed | ✅ roles, 4 departments, 4 leave types, 4 schedules, 9 employees, users, contracts, assignments, balances, 14 days attendance, 5 requests | fresh ephemeral MySQL seed |
+| Smoke test | ✅ 57/57 checks against ephemeral MySQL 8.4.9 | `scripts/smoke.ts` |
+| Unit tests (vitest) | ✅ 68/68 tests in 4 files | `npm test` |
 | OpenAPI / request collection | ❌ | — |
-| npm scripts | ❌ **Mismatch:** README documents `prisma:generate`, `prisma:deploy`, `prisma:migrate`, `prisma:seed`, `typecheck`; `package.json` only has `dev`, `build`, `start`. `build` is `tsc` only (README says `prisma generate && tsc`). | `package.json` vs `README.md` |
-| Local DB | 🟡 No MySQL/Docker on this machine; `scripts/ephemeral-db.ts --serve` (mysql-memory-server, port 3307) was used. `.env` currently points to `localhost:3306`. `docker-compose.yml` provided for teammates. | `.env`, `scripts/ephemeral-db.ts` |
-| `frontend/` | ❌ Next.js 16.3.4 boilerplate untouched (`app/page.tsx` is the template). `node_modules` **not installed**. `AGENTS.md` requires reading `node_modules/next/dist/docs/` before writing any code. | `frontend/app/page.tsx` |
-| Git | main branch, 5 commits, working tree clean except the two sketch photos | `git status` |
+| npm scripts | ✅ Prisma, typecheck, test, smoke, ephemeral DB and generated-client build scripts aligned | `ts-backend/package.json`, README |
+| Local DB | ✅ ephemeral MySQL 8.4.9 migration/seed/smoke verified; no persistent local MySQL/Docker required | `scripts/ephemeral-db.ts` |
+| `frontend/` | ✅ Next.js 16.3.4 P1/P2 application; Webpack production build, typecheck and lint green | `frontend/app`, `frontend/components`, `frontend/lib` |
+| Git | Uncommitted P1/P2 implementation and planning updates present; no commit was requested | `git status --short` |
 
 ---
 
-## 2. Phase 1 + 2 — EMPLOYEE & HR_MANAGER (backend ✅, frontend ❌)
+## 2. Phase 1 + 2 — EMPLOYEE & HR_MANAGER (backend ✅, frontend ✅)
 
 ### 2.1 Foundation
 
@@ -158,34 +158,33 @@ Deviations from the team SQL (all forced or additive) are listed in `docs/phase-
 | Transactional demo data only when DB has no employees | ✅ |
 | Seeded logins: `hr.manager` (HR_MANAGER), every employee's work email (EMPLOYEE) | ✅ |
 | Smoke test walking every module and rule | ✅ `scripts/smoke.ts` |
-| **vitest unit tests** on the rules (contract overlap, balance math, worked-hours, scoping) | ❌ |
+| **vitest unit tests** on pure attendance, date, schedule and permission rules | ✅ 68/68 tests in 4 files |
 | **OpenAPI spec / Postman collection** | ❌ |
-| `package.json` scripts to match README (`prisma:*`, `typecheck`, `test`, `build` with generate) | ❌ |
-| README Prisma version note (says 7, installed 6.19.3) | ❌ |
+| `package.json` scripts aligned with README (`prisma:*`, `typecheck`, `test`, generated-client build) | ✅ |
+| README Prisma version pinned to installed 6.19.3 | ✅ |
 
-### 2.7 Frontend screens for Phases 1–2 (mockup sections 0–3) — all ❌
+### 2.7 Frontend screens for Phases 1–2 (mockup sections 0–3) — verified ✅
 
-Nav from mockup: `HR | Employees ▼ | Contracts ▼ | Attendance | Time Off ▼ | Payroll`. Menu items shown depend on role.
+Navigation and route/button authorization are permission-driven from the authenticated session; shared routes preserve employee row scoping while exposing HR controls only to write/decision permissions.
 
 | Mockup screen | Route | Roles | Status |
 |---|---|---|---|
-| 0) Login (work email + password, accounts created by admin/HR) | `/login` | all | ❌ |
-| App shell: role-aware nav, header with user name, attendance status dot | `(app)/layout` | all | ❌ |
-| Attendance popup widget: Check In if no session, else Check Out + elapsed time; dot turns green | header | all | ❌ (API ready: `/attendance/session`, `/clock-in`, `/clock-out`) |
-| 1) Employees Kanban (default) + List | `/employees` | H, E (own) | ❌ |
-| Employee Form: header (name, title • department, email, phone), tabs *Work Information* / *Private Information*, smart buttons Contracts / Attendance / Time Off / Allocations with counts | `/employees/[id]` | H, E (own) | ❌ (API ready: `/employees/:id`, `/summary`) |
-| Departments list + form | `/departments` | H | ❌ |
-| Working Schedules list (name, days/week, weekly hours) + form (weekly pattern, derived hours) + assignment history | `/work-schedules`, `/work-schedules/[id]` | H | ❌ |
-| Contracts list (employee, type, start, end, salary, status; ACTIVE highlighted) + form | `/contracts`, `/contracts/[id]` | H, E (own read) | ❌ |
-| 2) Attendance list (employee, check in, check out, worked hours, status; filters Today / Employee) + day form with punches and HR corrections | `/attendance`, `/attendance/[id]` | H, E (own) | ❌ |
-| 3) Time Off ▼ → Requests list with inline Approve / Reject + form | `/time-off/requests`, `/time-off/requests/[id]` | H, E (own) | ❌ |
-| Time Off ▼ → Allocations (= Leave Balances) list + HR edit + initialize-year action | `/time-off/balances` | H, E (own read) | ❌ |
-| Time Off ▼ → Time Off Types list + form | `/time-off/types` | H | ❌ |
-| Time Off ▼ → Dashboard (my balances, pending approvals for HR) | `/time-off` | all | ❌ |
-| My Space (EMPLOYEE landing: details, balances, attendance, requests) | `/` | E | ❌ |
-| Users: create account, link employee, set role (HR in Phase 2; moves to Admin in Phase 5) | `/users` | H | ❌ |
+| 0) Login (work email + password, accounts created by admin/HR) | `/login` | all | ✅ |
+| App shell: role-aware nav, header with user name, attendance status | `(app)/layout` | all | ✅ |
+| Attendance popup widget: session-aware clock in/out and breaks | header | all | ✅ |
+| 1) Employees Kanban (default) + List | `/employees` | H | ✅ |
+| Employee Form: identity header, Work/Private tabs, smart links and lifecycle actions | `/employees/[id]`, `/employees/new`, `/employees/me` | H; E own read | ✅ |
+| Departments list + form | `/departments` | H | ✅ |
+| Working Schedules CRUD + assignment history | `/work-schedules` | H | ✅ |
+| Contracts list/detail/form with current emphasis and employee own-read mode | `/contracts`, `/contracts/[id]` | H; E own read | ✅ |
+| 2) Attendance list/detail with HR corrections and employee own-read mode | `/attendance`, `/attendance/[id]` | H; E own | ✅ |
+| 3) Time Off requests, employee create/edit/cancel and HR decisions | `/time-off/requests`, `/time-off/requests/[id]` | H; E own | ✅ |
+| Leave allocations with own-read mode plus HR CRUD/initialize/recompute | `/time-off/balances` | H; E own read | ✅ |
+| Time Off Types CRUD | `/time-off/types` | H | ✅ |
+| Time Off dashboard / My Space summaries and quick actions | `/time-off`, `/` | E; HR redirects to roster | ✅ |
+| Users: link employee, create login, role/active/password management | `/users` | H | ✅ |
 
-Frontend stack decided: Next.js 16 App Router, Tailwind 4, shadcn/ui, TanStack Query, react-hook-form + zod, typed API client with refresh-on-401. **Read `frontend/node_modules/next/dist/docs/` first** (after `npm install`).
+Frontend stack: Next.js 16 App Router, Tailwind 4, shadcn/ui, TanStack Query, react-hook-form + zod, and a typed API client with refresh-on-401. Combined evidence: Webpack production build passed twice; `npx tsc --noEmit` and `npm run lint` passed; all expected static and dynamic P1/P2 routes were generated. The default Turbopack build exits abnormally with code `-1` on this Windows machine, so `npm run build -- --webpack` is the verified fallback.
 
 ### 2.8 Mockup items deliberately **not** built in Phases 1–2 (decision 2026-09-05: schema is source of truth)
 
@@ -197,6 +196,10 @@ Frontend stack decided: Next.js 16 App Router, Tailwind 4, shadcn/ui, TanStack Q
 | Five roles / multi-role users | Single `role_id` per user; enum extended per phase. Multi-role is a 📝 for Phase 5. |
 | LATE attendance status, edit audit | Derived `is_late`, `missing_checkout`; `source = MANUAL` marks HR edits. |
 | Requests spanning two calendar years | Rejected with a clear message. |
+| User deletion | No backend `DELETE /users/:id`; P2-10 uses activation/deactivation only. Employee hard-delete remains the separate cascade path. |
+| Immediate account deactivation | Refresh tokens are revoked, but an issued access token stays valid until expiry; the UI states this limitation. |
+| Referenced leave-type deletion | Backend returns 422 `BUSINESS_RULE_VIOLATION` (not the stale planned 409); the UI displays the exact API message. |
+| Frontend production builder | Default Turbopack exits abnormally on this Windows host; the Webpack fallback passed twice and is the documented gate. |
 
 ---
 
@@ -346,11 +349,11 @@ Translation rules for MySQL/Prisma are the same as `docs/phase-1-plan.md` §4.1.
 
 | Item | Status | Notes |
 |---|---|---|
-| Frontend shell + auth + typed API client (unblocks every phase's UI) | ❌ | first frontend milestone |
-| Phase 1–2 screens (§2.7) | ❌ | |
-| vitest rule tests (backend) | ❌ | vitest + supertest already installed |
+| Frontend shell + auth + typed API client (unblocks every phase's UI) | ✅ | FE-1…FE-6 verified |
+| Phase 1–2 screens (§2.7) | ✅ | combined P1/P2 gate passed |
+| vitest rule tests (backend) | ✅ | 68/68 tests in 4 files |
 | OpenAPI / Postman collection | ❌ | |
-| `package.json` scripts aligned with README | ❌ | small fix |
+| `package.json` scripts aligned with README | ✅ | Prisma/typecheck/test/smoke/build scripts verified |
 | Deployment story (Docker for API + MySQL, Vercel or Node host for Next.js) | ❌ | |
 | Representative dataset incl. payroll (PDF deliverable 1) | 🟡 HR data seeded; payroll seed ⏳ |
 | Demo script — scenario A: employee → contract → schedule → attendance → payrun → payslip PDF; scenario B: leave type → allocation (balance) → request → approval → balance consumed (PDF deliverable 2) | ❌ | scenario B is fully supported by the API today |
@@ -362,8 +365,8 @@ Translation rules for MySQL/Prisma are the same as `docs/phase-1-plan.md` §4.1.
 
 | # | Item | Impact | Proposed default |
 |---|---|---|---|
-| 1 | README ↔ `package.json` script mismatch; `build` does not run `prisma generate` | Teammates following README get "missing script" errors | Add the scripts; keep README |
-| 2 | Prisma pinned to 6.19.3 (downgraded from 7) | Docs say 7; fine functionally. Do **not** upgrade mid-hackathon | Update README wording |
+| 1 | README ↔ `package.json` scripts | ✅ Resolved; documented scripts exist and backend build regenerates Prisma | Keep aligned as scripts change |
+| 2 | Prisma pinned to 6.19.3 | ✅ README updated; do **not** upgrade mid-hackathon | Revisit only with a planned migration |
 | 3 | `RoleName` enum changes need a migration per phase | Each phase adds a migration; existing rows unaffected | One migration per phase |
 | 4 | Single role per user vs mockup multi-role | Affects `users`, JWT payload, permission checks | Keep single role unless the Phase 5 schema adds `user_roles` |
 | 5 | Who owns user management now (HR_MANAGER) vs later (ADMIN) | Permission map change in Phase 5 | HR_MANAGER keeps create-EMPLOYEE-login only; ADMIN gets everything |
@@ -371,8 +374,9 @@ Translation rules for MySQL/Prisma are the same as `docs/phase-1-plan.md` §4.1.
 | 7 | Formula rules ("Python code" in mockup) | Security: never `eval` user input | Small whitelisted expression evaluator over categories/rules/inputs |
 | 8 | Bank details for "missing bank account" warning | No table today | Expect `employee_bank_details` in the Phase 3 schema |
 | 9 | Time off spanning years is rejected | Payroll unpaid-leave deduction across year boundary edge case | Keep for hackathon |
-| 10 | No MySQL on the dev machine | Use `scripts/ephemeral-db.ts --serve` (port 3307) or Docker; set `DATABASE_URL` accordingly | Documented in README |
-| 11 | Frontend `node_modules` not installed; Next.js 16 docs must be read first | Blocks all UI work | `npm install` in `frontend/`, then read `node_modules/next/dist/docs/` |
+| 10 | No persistent MySQL on the dev machine | ✅ Ephemeral MySQL 8.4.9 migration/seed/smoke verified | Use `npm run db:ephemeral` or Docker |
+| 11 | Next.js 16 builder behavior | P1/P2 Webpack build is green; default Turbopack exits abnormally on this Windows host | Keep `npm run build -- --webpack` as the verified gate and revisit after Next/toolchain updates |
+| 12 | Deactivation/role-change token window | Existing access JWTs retain active/role claims until expiry | Backend token-version or per-request user checks are future hardening |
 
 ---
 
@@ -399,10 +403,10 @@ the status tables here in sync as steps land.
 
 | Order | Work | Why now |
 |---|---|---|
-| 1 | Fix `package.json` scripts + README Prisma note (§8 #1–2) | 10-minute fix; unblocks teammates |
-| 2 | Frontend foundation: `npm install`, read Next.js 16 docs, shell + login + API client + attendance widget | Needed by every phase; API is ready |
-| 3 | Phase 1–2 screens in mockup order: Employees → Contracts → Working Schedules → Attendance → Time Off (Requests, Allocations, Types) → Departments → Users | Demo scenario B becomes clickable |
-| 4 | vitest tests for the rules already smoke-tested | Cheap regression net before payroll touches the same services |
-| 5 | On receipt of Phase 3/4 schema: migration → permissions → structures/rules (read+write) → payruns/payslips → engine → PDF/email → dashboard | Follows §9 playbook |
-| 6 | Phase 5 (ADMIN): role, user management UI, permission matrix | Last, because it re-homes `users:manage` |
-| 7 | Demo script, seed payroll data, roadmap | PDF deliverables |
+| 1 | ✅ Package scripts, README alignment and Prisma pin | Complete |
+| 2 | ✅ Frontend foundation: shell, auth, API client, shared primitives and attendance widget | Complete |
+| 3 | ✅ Phase 1 EMPLOYEE and Phase 2 HR_MANAGER screens | Combined gate passed |
+| 4 | ✅ Vitest regression suite and full seeded smoke | 68 unit tests; 57/57 smoke |
+| 5 | **Next:** P3-0 schema intake, then Phase 3/4 migration → permissions → structures/rules → payruns/payslips → engine → PDF/email → dashboard | P3–P5 remain blocked on the team schema or an explicit provisional-schema decision |
+| 6 | Phase 5 (ADMIN): role, user-management policy, permission matrix | After payroll role/schema work |
+| 7 | OpenAPI, deployment, demo script, payroll seed and roadmap | Final deliverables/hardening |

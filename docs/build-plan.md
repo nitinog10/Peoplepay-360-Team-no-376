@@ -4,15 +4,9 @@ Ordered, one-step-at-a-time build queue derived from `docs/overall-implementatio
 audit) and `docs/phase-1-plan.md` (schema, rules, API). Those two stay the source of truth for **what
 exists**; this file is the queue of **what to build next, in the order to build it**.
 
-Written 2026-09-05 against this repo state: Phase 1–2 backend ✅ (57/57 smoke), `frontend/` still the
-untouched Next.js 16 boilerplate with no `node_modules`, Phase 3–5 schema not yet received.
+Written 2026-09-05 and fully refreshed after the combined Phase 1–2 frontend delivery. Phase 1–2 backend and frontend are now ✅; Phase 3–5 schema is still pending.
 
-**Updated 2026-09-05 (later the same day).** Two sessions ran against this queue — **session 1 = P0**
-(P0-1, P0-2, P0-3), **session 2 = FE** (FE-1 … FE-6). All nine steps are ticked on the board below and
-each step block now carries a `Done` line saying how its gate was proved. The file inventory, every
-deviation from the plan as written, and the browser walk-throughs a human still has to click are in
-[§ What shipped: the P0 and FE sessions](#what-shipped-the-p0-and-fe-sessions-2026-09-05) at the end of
-this file. Nothing in P1/P2 is blocked any more; **P1-1 and P2-1 are the next steps.**
+**Final P1/P2 verification — 2026-09-05.** P1-1…P1-5 and P2-1…P2-10 are implemented and the combined gate passed: frontend Webpack production build, typecheck and lint; backend typecheck; 68/68 unit tests; fresh ephemeral MySQL migration + seed; and 57/57 end-to-end smoke checks. The default Turbopack build still exits abnormally on this machine, so the verified production-build command is `npm run build -- --webpack`. Full evidence and known contract deviations are recorded in [§ P1/P2 final verification](#p1p2-final-verification-2026-09-05) at the end of this file. **P3-0 is now the next step.**
 
 ## How to use this file
 
@@ -41,7 +35,7 @@ Every `ts-backend` row below is a real npm script as of P0-1 — the old `npx �
 | `ts-backend` unit tests | `npm test` — 68 tests in 4 files, no database (P0-3) |
 | `ts-backend` smoke | `npm run smoke` (`API_URL` defaults to localhost:8000) — 57/57, re-verified after P0 and again after FE |
 | `frontend` install / run | `npm install` · `npm run dev` → `http://localhost:3000` |
-| `frontend` verify | `npx tsc --noEmit` · `npm run lint` · `npm run build` — all three green after FE-6 |
+| `frontend` verify | `npx tsc --noEmit` · `npm run lint` · `$env:NODE_OPTIONS='--max-old-space-size=4096'; npm run build -- --webpack` — combined P1/P2 gate green; default Turbopack exits abnormally on this machine |
 
 ## The API contract every screen codes against (verified in source)
 
@@ -74,22 +68,22 @@ Legend: ❌ not started · 🟡 in progress · ✅ done and gate passed.
 | FE-5 | Attendance widget (session, clock in/out, breaks) | M | FE-4 | ✅ |
 | FE-6 | Shared list & form primitives (table, filters, fields, kanban) | M | FE-4 | ✅ |
 | **P1** | **Phase 1 — ① EMPLOYEE screens** | | | |
-| P1-1 | My Space dashboard (`/`) | M | FE-5, FE-6 | ❌ |
-| P1-2 | My profile (read-only employee form) | S | FE-6 | ❌ |
-| P1-3 | My attendance list + day detail | M | FE-6 | ❌ |
-| P1-4 | My time off: dashboard, requests, new request, cancel | L | FE-6 | ❌ |
-| P1-5 | My balances + my contracts (read-only) | S | FE-6 | ❌ |
+| P1-1 | My Space dashboard (`/`) | M | FE-5, FE-6 | ✅ |
+| P1-2 | My profile (read-only employee form) | S | FE-6 | ✅ |
+| P1-3 | My attendance list + day detail | M | FE-6 | ✅ |
+| P1-4 | My time off: dashboard, requests, new request, cancel | L | FE-6 | ✅ |
+| P1-5 | My balances + my contracts (read-only) | S | FE-6 | ✅ |
 | **P2** | **Phase 2 — ② HR_MANAGER screens** | | | |
-| P2-1 | Employees kanban + list + filters | L | FE-6 | ❌ |
-| P2-2 | Employee form (tabs, smart buttons, terminate) | L | P2-1 | ❌ |
-| P2-3 | Contracts list + form + terminate | M | P2-2 | ❌ |
-| P2-4 | Working schedules + assignment history | M | P2-2 | ❌ |
-| P2-5 | Attendance HR: filters, punch edits, mark-absences | L | P1-3 | ❌ |
-| P2-6 | Time off decisions: approve / reject / cancel | M | P1-4 | ❌ |
-| P2-7 | Allocations: edit, initialize-year, recompute | M | P1-4 | ❌ |
-| P2-8 | Time off types list + form | S | FE-6 | ❌ |
-| P2-9 | Departments list + form | S | FE-6 | ❌ |
-| P2-10 | Users: create, link employee, role, activate | M | FE-6 | ❌ |
+| P2-1 | Employees kanban + list + filters | L | FE-6 | ✅ |
+| P2-2 | Employee form (tabs, smart buttons, terminate) | L | P2-1 | ✅ |
+| P2-3 | Contracts list + form + terminate | M | P2-2 | ✅ |
+| P2-4 | Working schedules + assignment history | M | P2-2 | ✅ |
+| P2-5 | Attendance HR: filters, punch edits, mark-absences | L | P1-3 | ✅ |
+| P2-6 | Time off decisions: approve / reject / cancel | M | P1-4 | ✅ |
+| P2-7 | Allocations: edit, initialize-year, recompute | M | P1-4 | ✅ |
+| P2-8 | Time off types list + form | S | FE-6 | ✅ |
+| P2-9 | Departments list + form | S | FE-6 | ✅ |
+| P2-10 | Users: create, link employee, role, activate | M | FE-6 | ✅ |
 | **P3** | **Phase 3 — ③ HR_PAYROLL_USER (payruns & payslips)** | | | |
 | P3-0 | ⛔ Payroll schema intake (or provisional-schema decision) | S | — | ❌ |
 | P3-1 | Migration: payroll tables + remaining role enum values | M | P3-0 | ❌ |
@@ -489,8 +483,8 @@ re-check the employee view from Phase 1 still scopes correctly.
 - **Files** `app/(app)/time-off/types/*`
 - **Do** list (name, default annual days, description) and form; help text stating that
   `default_annual_days = 0` means the type is not balance-tracked (e.g. Unpaid); delete surfaces the API's
-  409 when the type is referenced.
-- **Done when** create / edit / delete round-trip and a type in use shows the 409 message.
+  422 business-rule message when the type is referenced.
+- **Done when** create / edit / delete round-trip and a type in use shows the 422 message.
 
 ### P2-9 — Departments · S · needs FE-6
 
@@ -504,8 +498,9 @@ re-check the employee view from Phase 1 still scopes correctly.
 - **Do** list (user, linked employee, role, active, last login) with `q` and role filter; create form
   (employee picker, username defaulting to the work email, password, role from `GET /roles`); edit role /
   active; hide role and active controls on the acting user's own row (the API also refuses).
-- **Done when** a created login authenticates against `POST /auth/login`, self-role-change isn't offered,
-  and deactivating a user drops their next request to 401.
+- **Done when** a created login authenticates against `POST /auth/login`, self-role-change and
+  self-deactivation controls are not offered, and deactivation blocks future login/refresh. Existing access
+  tokens remain valid until expiry because the backend does not perform per-request revocation checks.
 
 ---
 
@@ -744,8 +739,9 @@ Access: everything HR_PAYROLL_USER has, plus write on payroll config and delete 
 - **Do** admin list (search users / employees / email, role filter; columns user, linked employee, role,
   active, last login), create-edit drawer (employee link, username, password or generated invite, role,
   active), deactivate and password reset with a note that both revoke existing sessions.
-- **Done when** an admin can create and immediately log in as a user of each role, and deactivating drops
-  that user's next request to 401.
+- **Done when** an admin can create and immediately log in as a user of each role, and deactivation blocks
+  future login/refresh. Immediate access-token invalidation requires the token-version/per-request check
+  recorded in the P1/P2 verification notes.
 
 ### P5-4 — UI roles & permissions matrix · S · needs P5-2
 
@@ -899,3 +895,25 @@ Seeded logins are unchanged: `hr.manager` / `ChangeMe123!` for HR, any employee'
   §9 playbook in the overall plan.
 - Keep `ts-backend/README.md` current on new endpoints, env vars and seeded logins as each phase lands.
 
+
+---
+
+# P1/P2 final verification (2026-09-05)
+
+Phase 1 (EMPLOYEE) and Phase 2 (HR_MANAGER) are implemented and verified together. The combined gate produced this evidence:
+
+- Frontend production build: `$env:NODE_OPTIONS='--max-old-space-size=4096'; npm run build -- --webpack` passed twice, including TypeScript, prerendering, and route generation for `/`, `/employees`, `/employees/me`, `/attendance`, `/contracts`, `/departments`, `/work-schedules`, `/time-off`, `/time-off/requests`, `/time-off/balances`, `/time-off/types`, and `/users` plus dynamic detail routes.
+- Frontend static checks: `npx tsc --noEmit` passed; `npm run lint` passed with zero errors and zero warnings.
+- Backend static checks: `npm run prisma:generate` and `npm run typecheck` passed.
+- Unit tests: `npm test` passed **68/68 tests in 4 files**.
+- Integration: ephemeral MySQL **8.4.9** started, the initial migration applied, the representative seed completed, and the API connected successfully.
+- End-to-end API/RBAC/business-rule smoke: `npm run smoke` passed **57/57 checks**. Temporary API and database processes were stopped afterward.
+
+Known deviations and environment limitations:
+
+1. Next.js 16.3.4's default Turbopack `npm run build` exits abnormally with code `-1` and no diagnostic on this Windows machine, including with a 4 GB Node heap. The documented and verified production-build fallback is `npm run build -- --webpack`.
+2. The backend exposes no `DELETE /users/:id`; P2-10 intentionally offers deactivation rather than inventing a delete operation.
+3. Deactivation and password changes revoke refresh tokens, but an already-issued access token remains valid until expiry. A user's next request is therefore not guaranteed to return 401 immediately.
+4. A referenced leave-type delete is an actual **422 BUSINESS_RULE_VIOLATION**, not the stale planned 409; the UI keeps delete actionable and displays the API message verbatim.
+
+No browser-only manual click-through was recorded in this automated gate. Compilation, routing, permission boundaries, mutations, rule failures, migration/seed, and cross-module workflows are covered by the checks above.

@@ -147,6 +147,8 @@ export interface DataTableProps<T> {
   /** Stable identity per row — the primary key, not the array index. */
   rowKey: (row: T) => React.Key;
   onRowClick?: (row: T) => void;
+  /** Optional semantic styling for a real data row. */
+  rowClassName?: (row: T) => string | undefined;
   /** A trailing, right-aligned column for per-row buttons. */
   rowActions?: (row: T) => React.ReactNode;
   empty?: EmptyState;
@@ -162,6 +164,7 @@ export function DataTable<T>({
   list,
   rowKey,
   onRowClick,
+  rowClassName,
   rowActions,
   empty,
   caption,
@@ -269,6 +272,7 @@ export function DataTable<T>({
                 className={cn(
                   onRowClick &&
                     "cursor-pointer outline-none focus-visible:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50",
+                  rowClassName?.(row),
                 )}
               >
                 {columns.map((column) => (

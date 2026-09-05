@@ -48,6 +48,15 @@ export interface EmployeeBody {
   status?: EmployeeStatus;
 }
 
+export interface CreateScheduleAssignmentBody {
+  scheduleId: number;
+  effectiveFrom: string;
+  effectiveTo?: string | null;
+  closePrevious?: boolean;
+}
+
+export type UpdateScheduleAssignmentBody = Omit<Partial<CreateScheduleAssignmentBody>, "closePrevious">;
+
 export const employeeKeys = {
   all: ["employees"] as const,
   list: (query: ListEmployeesQuery) => ["employees", "list", query] as const,
@@ -118,6 +127,15 @@ export const employees = {
           { signal },
         ),
     }),
+
+  createAssignment: (employeeId: number, body: CreateScheduleAssignmentBody) =>
+    http.post<ScheduleAssignment>(`/employees/${employeeId}/schedule-assignments`, body),
+
+  updateAssignment: (assignmentId: number, body: UpdateScheduleAssignmentBody) =>
+    http.patch<ScheduleAssignment>(`/schedule-assignments/${assignmentId}`, body),
+
+  removeAssignment: (assignmentId: number) =>
+    http.delete<void>(`/schedule-assignments/${assignmentId}`),
 
   create: (body: EmployeeBody) => http.post<Employee>("/employees", body),
 

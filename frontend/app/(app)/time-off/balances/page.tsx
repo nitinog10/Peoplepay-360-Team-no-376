@@ -1,14 +1,15 @@
+import { Suspense } from "react";
+
+import { LeaveBalancesTable } from "@/components/time-off/balances-table";
 import { RequirePermission } from "@/components/forbidden";
-import { StepPlaceholder } from "@/components/shell/step-placeholder";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function LeaveBalancesPage() {
   return (
     <RequirePermission permission="leave-balances:read">
-      <StepPlaceholder
-        title="Allocations"
-        step="P1-5 (own) / P2-7 (HR)"
-        description="Leave allocations per type and year; remaining and available are API-derived, never inputs."
-      />
+      <Suspense fallback={<div className="mx-auto w-full max-w-content px-4 py-8"><Skeleton className="h-72" /></div>}>
+        <LeaveBalancesTable />
+      </Suspense>
     </RequirePermission>
   );
 }

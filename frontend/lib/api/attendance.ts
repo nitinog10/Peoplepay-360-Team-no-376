@@ -11,7 +11,9 @@ import type {
 } from "./types";
 
 /** The `toOrderBy` allow-list in `src/modules/attendance/service.ts`. */
-export const ATTENDANCE_SORTS = ["attendanceDate", "status", "createdAt"] as const;
+export const ATTENDANCE_SORTS = [
+  "attendanceDate", "attendanceRecordId", "status", "employeeId",
+] as const;
 
 export type ListRecordsQuery = ListQuery & {
   employeeId?: number;

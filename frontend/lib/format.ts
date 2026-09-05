@@ -49,3 +49,23 @@ export function formatMinutes(total: number): string {
 export function formatHours(hours: number): string {
   return formatMinutes(Math.round(hours * 60));
 }
+
+/** A decimal day count with no meaningless trailing zeroes. */
+export function formatDays(days: number): string {
+  return `${new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(days)} ${days === 1 ? "day" : "days"}`;
+}
+
+/** Money formatted in the contract's own currency. */
+export function formatCurrency(amount: number | null, currency: string | null): string {
+  if (amount === null) return "—";
+  if (!currency) return new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(amount);
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  } catch {
+    return `${currency} ${new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(amount)}`;
+  }
+}

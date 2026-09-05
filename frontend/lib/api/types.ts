@@ -150,6 +150,31 @@ export interface LoginBody {
   password: string;
 }
 
+// ---------- user management ----------
+
+export interface Role {
+  roleId: number;
+  roleName: RoleName;
+}
+
+export interface ManagedUser {
+  userId: number;
+  employeeId: number;
+  username: string;
+  isActive: boolean;
+  lastLoginAt: DateTimeString | null;
+  createdAt: DateTimeString;
+  role: RoleName;
+  employee: {
+    employeeId: number;
+    firstName: string;
+    lastName: string;
+    email: string;
+    jobTitle: string | null;
+    status: EmployeeStatus;
+  };
+}
+
 // ---------- departments ----------
 
 export interface Department extends DepartmentRef {

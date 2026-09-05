@@ -1,14 +1,21 @@
+import { Suspense } from "react";
+
+import { EmployeesList } from "@/components/employees/employees-list";
 import { RequirePermission } from "@/components/forbidden";
-import { StepPlaceholder } from "@/components/shell/step-placeholder";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function EmployeesPage() {
   return (
     <RequirePermission permission="employees:write">
-      <StepPlaceholder
-        title="Employees"
-        step="P2-1"
-        description="The roster, as a kanban grouped by department and as a filterable list."
-      />
+      <Suspense
+        fallback={
+          <div className="mx-auto w-full max-w-content px-4 py-8">
+            <Skeleton className="h-72" />
+          </div>
+        }
+      >
+        <EmployeesList />
+      </Suspense>
     </RequirePermission>
   );
 }
