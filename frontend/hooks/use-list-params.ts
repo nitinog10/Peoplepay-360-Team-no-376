@@ -15,7 +15,7 @@ import type { ListQuery } from "@/lib/api";
  * survivable across the Back button — the gate FE-6 is measured against.
  *
  * The five reserved keys mirror `paginationSchema` in `src/lib/http.ts`
- * (`page ≥ 1`, `pageSize 1…100`, `sort`, `order`, `q`); anything else in the
+ * (`page ≥ 1`, `pageSize ∈ 10 | 20 | 50 | 100`, `sort`, `order`, `q`); anything else in the
  * query string is treated as a module filter and handed back through `filters`.
  * Values equal to the defaults are dropped from the URL, so the tidy
  * `/employees` stays `/employees` rather than growing five redundant params.
@@ -25,7 +25,7 @@ import type { ListQuery } from "@/lib/api";
  * request-time rendering, and Next asks for the boundary explicitly.
  */
 
-export const DEFAULT_PAGE_SIZE = 20;
+export const DEFAULT_PAGE_SIZE = 10;
 export const PAGE_SIZES = [10, 20, 50, 100] as const;
 
 const RESERVED = new Set(["page", "pageSize", "sort", "order", "q"]);
@@ -75,8 +75,14 @@ function toInt(raw: string | null, fallback: number, min: number, max: number): 
   return Math.min(Math.max(value, min), max);
 }
 
+function toPageSize(raw: string | number | null | undefined, fallback: number): number {
+  const value = Number(raw);
+  return Number.isInteger(value) && (PAGE_SIZES as readonly number[]).includes(value) ? value : fallback;
+}
+
 export function useListParams(options: ListParamsOptions = {}): ListParamsApi {
-  const { sort: defaultSort, order: defaultOrder = "asc", pageSize: defaultPageSize = DEFAULT_PAGE_SIZE } = options;
+  const { sort: defaultSort, order: defaultOrder = "asc", pageSize: configuredPageSize = DEFAULT_PAGE_SIZE } = options;
+  const defaultPageSize = toPageSize(configuredPageSize, DEFAULT_PAGE_SIZE);
   const router = useRouter();
   const pathname = usePathname();
   const search = useSearchParams();
@@ -85,7 +91,7 @@ export function useListParams(options: ListParamsOptions = {}): ListParamsApi {
     const order = search.get("order");
     return {
       page: toInt(search.get("page"), 1, 1, Number.MAX_SAFE_INTEGER),
-      pageSize: toInt(search.get("pageSize"), defaultPageSize, 1, 100),
+      pageSize: toPageSize(search.get("pageSize"), defaultPageSize),
       sort: search.get("sort") ?? defaultSort,
       order: order === "asc" || order === "desc" ? order : defaultOrder,
       q: search.get("q") ?? undefined,

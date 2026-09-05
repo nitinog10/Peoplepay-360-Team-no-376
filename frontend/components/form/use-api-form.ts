@@ -38,8 +38,8 @@ export interface ApiFormOptions<TValues extends FieldValues, TResult> {
   defaultValues: DefaultValues<TValues>;
   submit: (values: TValues) => Promise<TResult>;
   onSuccess?: (result: TResult, values: TValues) => void;
-  /** Add domain-specific field errors before the standard API mapping runs. */
-  onApiError?: (error: ApiError, form: UseFormReturn<TValues>) => void;
+  /** Add domain-specific field errors and optionally return a richer banner message. */
+  onApiError?: (error: ApiError, form: UseFormReturn<TValues>) => string | void;
   /**
    * The field names this form owns, for matching a 409's index name. Defaults to
    * the keys of `defaultValues`; pass a module's `*_FIELDS` when the form posts a
@@ -86,7 +86,7 @@ export function useApiForm<TValues extends FieldValues, TResult>({
         setFormError(error instanceof Error ? error.message : "Something went wrong.");
         return;
       }
-      onApiError?.(error, form);
+      const domainMessage = onApiError?.(error, form);
       const named = error.fieldErrors(fields ?? Object.keys(form.getValues()));
       let first = true;
       for (const [field, message] of Object.entries(named)) {
@@ -94,7 +94,7 @@ export function useApiForm<TValues extends FieldValues, TResult>({
         first = false;
       }
       if (Object.keys(named).length === 0 || error.status === 409 || error.status === 422) {
-        setFormError(error.message);
+        setFormError(domainMessage ?? error.message);
       }
     }
   });

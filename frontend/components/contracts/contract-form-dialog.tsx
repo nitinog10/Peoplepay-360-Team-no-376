@@ -1,7 +1,8 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { LoaderCircleIcon } from "lucide-react";
+import { CircleAlertIcon, LoaderCircleIcon } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -30,9 +31,11 @@ import {
   type ContractType,
   type UpdateContractBody,
 } from "@/lib/api";
-import { todayDateOnly, toDateOnly } from "@/lib/format";
+import { formatDate, todayDateOnly, toDateOnly } from "@/lib/format";
 
 const CONTRACT_TYPES: readonly ContractType[] = ["PERMANENT", "FIXED_TERM", "INTERNSHIP", "CONTRACTOR"];
+
+type ContractConflict = Pick<Contract, "contractId" | "startDate" | "endDate">;
 
 const schema = z.object({
   employeeId: z.string(),
@@ -73,6 +76,31 @@ function body(values: Values): ContractBody {
   };
 }
 
+function contractPeriod(contract: ContractConflict): string {
+  return `${formatDate(contract.startDate)} – ${contract.endDate ? formatDate(contract.endDate) : "Open-ended"}`;
+}
+
+function conflictsFrom(details: unknown): ContractConflict[] {
+  const conflicts = (details as { conflicts?: unknown } | null)?.conflicts;
+  if (!Array.isArray(conflicts)) return [];
+  return conflicts.filter((value): value is ContractConflict => {
+    if (!value || typeof value !== "object") return false;
+    const candidate = value as Record<string, unknown>;
+    return typeof candidate.contractId === "number"
+      && Number.isInteger(candidate.contractId)
+      && typeof candidate.startDate === "string"
+      && (candidate.endDate === null || typeof candidate.endDate === "string");
+  });
+}
+
+function overlapMessage(error: ApiError): string | undefined {
+  if (error.status !== 409 || error.code !== "CONFLICT") return undefined;
+  const conflicts = conflictsFrom(error.details);
+  if (conflicts.length === 0) return undefined;
+  const records = conflicts.map((conflict) => `Contract #${conflict.contractId} (${contractPeriod(conflict)})`).join(", ");
+  return `${records} ${conflicts.length === 1 ? "overlaps" : "overlap"} this period. Terminate the existing contract or choose non-overlapping dates.`;
+}
+
 export function ContractFormDialog({
   contract,
   defaultEmployeeId,
@@ -96,10 +124,11 @@ export function ContractFormDialog({
       ? api.contracts.update(contract.contractId, { ...body(values), employeeId: undefined } as UpdateContractBody)
       : api.contracts.create(body(values)),
     onApiError: (error, apiForm) => {
-      const conflicts = (error.details as { conflicts?: unknown } | undefined)?.conflicts;
-      if (error.status === 409 && error.code === "CONFLICT" && Array.isArray(conflicts)) {
-        apiForm.setError("startDate", { type: "server", message: error.message }, { shouldFocus: true });
-        apiForm.setError("endDate", { type: "server", message: error.message });
+      const message = overlapMessage(error);
+      if (message) {
+        apiForm.setError("startDate", { type: "server", message }, { shouldFocus: true });
+        apiForm.setError("endDate", { type: "server", message });
+        return message;
       }
     },
     onSuccess: (saved) => {
@@ -111,6 +140,18 @@ export function ContractFormDialog({
     },
   });
   const { register } = form.form;
+  const selectedEmployeeId = Number(form.form.watch("employeeId"));
+  const hasSelectedEmployee = Number.isInteger(selectedEmployeeId) && selectedEmployeeId > 0;
+  const activeContracts = useQuery({
+    ...api.contracts.list({
+      employeeId: hasSelectedEmployee ? selectedEmployeeId : undefined,
+      status: "ACTIVE",
+      pageSize: 100,
+      sort: "startDate",
+      order: "desc",
+    }),
+    enabled: open && !contract && hasSelectedEmployee,
+  });
 
   return (
     <Dialog open={open} onOpenChange={(next) => {
@@ -125,6 +166,34 @@ export function ContractFormDialog({
           <DialogDescription>Contract status and weekly lifecycle changes are managed by the API; use Terminate for an active contract.</DialogDescription>
         </DialogHeader>
         <Form api={form}>
+          {!contract && hasSelectedEmployee && (
+            <div className="rounded-xl border border-border bg-muted/30 p-3 text-sm" aria-live="polite">
+              {activeContracts.isPending ? (
+                <p className="flex items-center gap-2 text-muted-foreground"><LoaderCircleIcon className="size-4 animate-spin" /> Checking active contracts…</p>
+              ) : activeContracts.isError ? (
+                <p className="text-destructive">Active contracts could not be checked. Refresh and try again.</p>
+              ) : (activeContracts.data?.data.length ?? 0) > 0 ? (
+                <div className="space-y-2">
+                  <p className="flex items-center gap-2 font-medium text-warning"><CircleAlertIcon className="size-4" /> Active contracts in the database</p>
+                  <ul className="space-y-1.5">
+                    {activeContracts.data?.data.map((activeContract) => (
+                      <li key={activeContract.contractId} className="flex flex-wrap items-baseline justify-between gap-x-3 rounded-lg bg-background px-3 py-2">
+                        <Link className="font-medium text-primary underline-offset-4 hover:underline" href={`/contracts/${activeContract.contractId}`} onClick={() => setOpen(false)}>
+                          Contract #{activeContract.contractId}
+                        </Link>
+                        <span className="text-muted-foreground">
+                          {contractPeriod(activeContract)} · {activeContract.isCurrent ? "Current" : "Scheduled"}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="text-xs text-muted-foreground">Terminate an existing contract or choose dates that do not overlap before creating a replacement.</p>
+                </div>
+              ) : (
+                <p className="text-muted-foreground">No active contracts found for this employee.</p>
+              )}
+            </div>
+          )}
           <FormGrid>
             {!contract && (
               <Field name="employeeId" label="Employee" required>

@@ -21,7 +21,7 @@ const hr: Actor = { userId: 1, employeeId: 1, role: 'HR_MANAGER', username: 'hr.
 const payroll: Actor = { userId: 3, employeeId: 3, role: 'HR_PAYROLL_USER', username: 'payroll.user' };
 const payrollManager: Actor = { userId: 4, employeeId: 4, role: 'HR_PAYROLL_MANAGER', username: 'payroll.manager' };
 const admin: Actor = { userId: 5, employeeId: 5, role: 'ADMIN', username: 'admin' };
-const employee: Actor = { userId: 2, employeeId: 7, role: 'EMPLOYEE', username: 'aarav.mehta@oxp.com' };
+const employee: Actor = { userId: 2, employeeId: 7, role: 'EMPLOYEE', username: 'employee' };
 
 const PAYROLL_USER_PERMISSIONS = ['payroll:read', 'payruns:write', 'payslips:write', 'salary-config:read'] as const;
 const PAYROLL_MANAGER_PERMISSIONS = ['salary-config:write', 'payruns:delete', 'payslips:delete'] as const;

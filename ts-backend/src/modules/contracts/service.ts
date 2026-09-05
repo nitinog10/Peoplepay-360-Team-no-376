@@ -24,15 +24,27 @@ function present(c: ContractRow, today: Date) {
   return { ...c, isCurrent: covers };
 }
 
+/** TERMINATED is explicit; ACTIVE and EXPIRED are derived from the end date. */
+function lifecycleStatus(status: ContractRow['status'], endDate: Date | null, today: Date): ContractRow['status'] {
+  if (status === 'TERMINATED') return status;
+  return endDate && endDate.getTime() < today.getTime() ? 'EXPIRED' : 'ACTIVE';
+}
+
 const FAR_FUTURE = new Date('9999-12-31T00:00:00.000Z');
 
-/** Persist EXPIRED for ACTIVE contracts whose end date has passed. Idempotent. */
-export async function expireContracts(today: Date = todayLocal()) {
-  const result = await prisma.contract.updateMany({
-    where: { status: 'ACTIVE', endDate: { lt: today } },
-    data: { status: 'EXPIRED' },
-  });
-  return result.count;
+/** Repair date-derived statuses in both directions without changing TERMINATED contracts. */
+export async function reconcileContractStatuses(today: Date = todayLocal()) {
+  const [expired, reactivated] = await prisma.$transaction([
+    prisma.contract.updateMany({
+      where: { status: 'ACTIVE', endDate: { lt: today } },
+      data: { status: 'EXPIRED' },
+    }),
+    prisma.contract.updateMany({
+      where: { status: 'EXPIRED', OR: [{ endDate: null }, { endDate: { gte: today } }] },
+      data: { status: 'ACTIVE' },
+    }),
+  ]);
+  return expired.count + reactivated.count;
 }
 
 /** The single resolver payroll reuses: the ACTIVE contract covering `date`. */
@@ -66,7 +78,7 @@ async function assertNoOverlap(employeeId: number, start: Date, end: Date | null
 }
 
 export async function list(actor: Actor, query: ListContractsQuery) {
-  await expireContracts();
+  await reconcileContractStatuses();
   const today = todayLocal();
   const own = scopeToEmployee(actor, query.employeeId);
   const where: Prisma.ContractWhereInput = {
@@ -103,7 +115,7 @@ async function findOrThrow(contractId: number): Promise<ContractRow> {
 }
 
 export async function get(actor: Actor, contractId: number) {
-  await expireContracts();
+  await reconcileContractStatuses();
   const c = await findOrThrow(contractId);
   scopeToEmployee(actor, c.employeeId);
   return present(c, todayLocal());
@@ -115,8 +127,7 @@ export async function create(actor: Actor, input: CreateContractInput) {
   if (employee.status === 'TERMINATED') throw new BusinessRuleError('Cannot create a contract for a terminated employee');
 
   const today = todayLocal();
-  let status = input.status;
-  if (status === 'ACTIVE' && input.endDate && input.endDate.getTime() < today.getTime()) status = 'EXPIRED';
+  const status = lifecycleStatus(input.status, input.endDate ?? null, today);
   if (status === 'ACTIVE') await assertNoOverlap(input.employeeId, input.startDate, input.endDate ?? null);
 
   const created = await prisma.contract.create({
@@ -143,8 +154,7 @@ export async function update(contractId: number, input: UpdateContractInput) {
   if (endDate && endDate.getTime() < startDate.getTime()) throw new BusinessRuleError('endDate must be on or after startDate');
 
   const today = todayLocal();
-  let status = input.status ?? existing.status;
-  if (status === 'ACTIVE' && endDate && endDate.getTime() < today.getTime()) status = 'EXPIRED';
+  const status = lifecycleStatus(input.status ?? existing.status, endDate, today);
   if (status === 'ACTIVE') await assertNoOverlap(existing.employeeId, startDate, endDate, contractId);
 
   const updated = await prisma.contract.update({

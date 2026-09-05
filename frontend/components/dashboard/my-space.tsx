@@ -108,11 +108,11 @@ export function MySpace() {
   const balances = useQuery({ ...api.leaveBalances.me(), enabled: !hrLanding });
   const session = useQuery({ ...api.attendance.session(), enabled: !hrLanding });
   const attendance = useQuery({
-    ...api.attendance.list({ from, to: today, pageSize: 7, sort: "attendanceDate", order: "desc" }),
+    ...api.attendance.list({ from, to: today, pageSize: 10, sort: "attendanceDate", order: "desc" }),
     enabled: !hrLanding,
   });
   const requests = useQuery({
-    ...api.timeOff.list({ pageSize: 5, sort: "requestedAt", order: "desc" }),
+    ...api.timeOff.list({ pageSize: 10, sort: "requestedAt", order: "desc" }),
     enabled: !hrLanding,
   });
 
@@ -258,7 +258,7 @@ export function MySpace() {
         <Card>
           <CardHeader>
             <CardTitle>Latest time off</CardTitle>
-            <CardDescription>Your five most recent requests.</CardDescription>
+            <CardDescription>Your ten most recent requests.</CardDescription>
             <CardAction>
               <Button asChild size="sm" variant="outline"><Link href="/time-off/requests">All requests</Link></Button>
             </CardAction>

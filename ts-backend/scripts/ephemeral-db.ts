@@ -1,18 +1,22 @@
 /**
  * Ephemeral MySQL for development/verification when no MySQL server is installed.
  *
- *   npx tsx scripts/ephemeral-db.ts            # start, migrate, verify tables, stop
- *   npx tsx scripts/ephemeral-db.ts --serve    # start, migrate, seed, keep running (Ctrl+C to stop)
+ *   npx tsx scripts/ephemeral-db.ts            # start on port 3307, migrate, verify tables, stop
+ *   npx tsx scripts/ephemeral-db.ts --serve    # start on port 3307, migrate, seed, keep running
+ *   $env:EPHEMERAL_PORT='0'                    # opt into a random free port in PowerShell
  *
- * With --serve the script prints a DATABASE_URL you can export before `npm run dev`.
+ * With --serve the script prints a DATABASE_URL you can set before `npm run dev`.
  */
 import { execSync } from 'node:child_process';
 import { createDB } from 'mysql-memory-server';
 import mariadb from 'mariadb';
 
 const serve = process.argv.includes('--serve');
-/** Fixed port (e.g. EPHEMERAL_PORT=3307) so tooling can predict DATABASE_URL; 0 = random free port. */
-const fixedPort = Number(process.env.EPHEMERAL_PORT ?? 0) || 0;
+/** Port 3307 matches .env; explicitly set EPHEMERAL_PORT=0 for a random free port. */
+const fixedPort = Number(process.env.EPHEMERAL_PORT ?? 3307);
+if (!Number.isInteger(fixedPort) || fixedPort < 0 || fixedPort > 65535) {
+  throw new Error('EPHEMERAL_PORT must be an integer from 0 to 65535');
+}
 
 async function main() {
   console.log('Starting ephemeral MySQL 8.4 (first run downloads the binary)...');
@@ -54,7 +58,7 @@ async function main() {
     } catch {
       console.warn('Seed failed or not present yet; database is still available.');
     }
-    console.log(`\nDatabase is running. In another terminal:\n  set DATABASE_URL=${url}\n  npm run dev\nPress Ctrl+C to stop.`);
+    console.log(`\nDatabase is running. In another PowerShell terminal:\n  $env:DATABASE_URL='${url}'\n  npm run dev\nPress Ctrl+C to stop.`);
     await new Promise<void>((resolve) => {
       process.on('SIGINT', () => resolve());
       process.on('SIGTERM', () => resolve());

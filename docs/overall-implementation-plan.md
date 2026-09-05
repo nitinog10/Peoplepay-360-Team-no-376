@@ -156,7 +156,7 @@ Deviations from the team SQL (all forced or additive) are listed in `docs/phase-
 |---|---|
 | Idempotent lookup seed (roles, departments, leave types, schedules) | ✅ |
 | Transactional demo data only when DB has no employees | ✅ |
-| Seeded logins: `hr.manager` (HR_MANAGER), `vikram.singh@oxp.com` (HR_PAYROLL_USER), `maya.shah@oxp.com` (HR_PAYROLL_MANAGER), `admin` (ADMIN), employee work emails (EMPLOYEE) | ✅ |
+| Seeded logins: `employee` (EMPLOYEE), `hr.manager` (HR_MANAGER), `hr.payroll.user` (HR_PAYROLL_USER), `hr.payroll.manager` (HR_PAYROLL_MANAGER), and `admin` (ADMIN); all use explicit per-role env pairs | ✅ |
 | Smoke test walking every released module and rule | ✅ **145/145** Phase 1–5 `scripts/smoke.ts` |
 | **vitest unit tests** on attendance, date, schedule, permission and safe payroll-engine rules | ✅ **82/82 tests in 5 files** |
 | **OpenAPI spec / Postman collection** | ❌ |

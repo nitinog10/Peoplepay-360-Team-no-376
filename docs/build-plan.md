@@ -244,7 +244,7 @@ Everything in P1–P5's UI sits on these six steps. Do them in order; don't star
   and redirect to `/login`. On app load bootstrap with `/auth/refresh` (the cookie survives a reload, the
   in-memory token doesn't) then `/auth/me`. `types.ts` hand-mirrors the backend response shapes;
   `SessionProvider` exposes `user`, `permissions`, `can(p)`; the `(app)` layout redirects anonymous users.
-- **Done when** login works for `hr.manager` and for an employee's work email, a hard reload keeps the
+- **Done when** login works for the canonical `hr.manager` and `employee` usernames (and their linked work-email aliases), a hard reload keeps the
   session, and with `JWT_ACCESS_TTL_MINUTES=1` a stale request refreshes and retries transparently
   (confirm the 401 → refresh → retry trio in the network panel).
 - ✅ **Done 2026-09-05.** Built: `lib/api/{client,types,index,employees,departments,attendance}.ts`,
@@ -348,8 +348,8 @@ Everything in P1–P5's UI sits on these six steps. Do them in order; don't star
 
 # Phase 1 — ① EMPLOYEE screens
 
-Backend for all of these is done; every step is UI plus an `lib/api` module. Verify each as the seeded
-employee (`aarav.mehta@oxp.com`), then re-check as HR that nothing broke.
+Backend for all of these is done; every step is UI plus an `lib/api` module. Verify each as the canonical
+seeded employee (`employee`, from `SEED_EMPLOYEE_USERNAME`), then re-check as HR that nothing broke.
 
 ### P1-1 — My Space dashboard (`/`) · M · needs FE-5, FE-6
 
@@ -405,8 +405,8 @@ employee (`aarav.mehta@oxp.com`), then re-check as HR that nothing broke.
 
 # Phase 2 — ② HR_MANAGER screens
 
-Order follows the mockup's nav so the demo becomes clickable earliest. Verify each as `hr.manager`, then
-re-check the employee view from Phase 1 still scopes correctly.
+Order follows the mockup's nav so the demo becomes clickable earliest. Verify each as the canonical HR
+manager (`hr.manager`, from `SEED_HR_MANAGER_USERNAME`), then re-check the employee view from Phase 1 still scopes correctly.
 
 ### P2-1 — Employees kanban + list · L · needs FE-6
 
@@ -867,11 +867,12 @@ cd ts-backend && npm run typecheck && npm test && npm run smoke   # 0 errors · 
 
 # terminal 3 — the frontend
 cd frontend && npx tsc --noEmit && npm run lint && npm run build  # all clean, 14 routes prerendered
-cd frontend && npm run dev                                  # :3000 — log in as hr.manager / ChangeMe123!
+cd frontend && npm run dev                                  # :3000 — log in with any canonical role pair from ts-backend/.env
 ```
 
-Seeded logins are unchanged: `hr.manager` / `ChangeMe123!` for HR, any employee's work email (e.g.
-`aarav.mehta@oxp.com`, `john.dsouza@oxp.com`) / `Employee123!` for EMPLOYEE.
+Canonical seeded logins are `employee`, `hr.manager`, `hr.payroll.user`, `hr.payroll.manager`, and `admin`.
+Each username and password comes from its matching `SEED_<ROLE>_USERNAME` / `SEED_<ROLE>_PASSWORD` pair;
+linked employee work emails remain valid aliases.
 
 ### Files, by area
 

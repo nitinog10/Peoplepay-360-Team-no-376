@@ -20,19 +20,22 @@ npm run dev                   # http://localhost:8000/api/v1
 |---|---|
 | Existing MySQL 8 | Set `DATABASE_URL="mysql://USER:PASSWORD@HOST:3306/peoplepay360"` (database must exist). |
 | Docker | `docker compose up -d` (MySQL 8.4 on 3306, root/root, database `peoplepay360`). |
-| No MySQL installed | `npm run db:ephemeral` (`EPHEMERAL_PORT=3307` to pin the port) downloads a MySQL 8.4 binary, migrates, seeds and keeps running. Then start the API with `DATABASE_URL=mysql://root@127.0.0.1:3307/peoplepay360 npm run dev`. Requires the Microsoft Visual C++ 2015-2022 x64 runtime. |
+| No MySQL installed | `npm run db:ephemeral` starts MySQL 8.4 on port 3307 by default, migrates, seeds, and keeps it running. In another PowerShell terminal, run `$env:DATABASE_URL='mysql://root@127.0.0.1:3307/peoplepay360'; npm run dev`. Set `$env:EPHEMERAL_PORT='0'` first to use a random free port instead. Requires the Microsoft Visual C++ 2015-2022 x64 runtime. |
 
 Schema changes: edit `prisma/schema.prisma`, then `npm run prisma:migrate -- --name <change>`.
 
 ### Seeded logins
 
-| Username | Password (env) | Role |
-|---|---|---|
-| `hr.manager` (`SEED_HR_USERNAME`) | `SEED_HR_PASSWORD` | HR_MANAGER |
-| `vikram.singh@oxp.com` | `SEED_PAYROLL_PASSWORD` | HR_PAYROLL_USER |
-| `maya.shah@oxp.com` | `SEED_PAYROLL_MANAGER_PASSWORD` | HR_PAYROLL_MANAGER |
-| `admin` (`SEED_ADMIN_USERNAME`) | `SEED_ADMIN_PASSWORD` | ADMIN |
-| any other employee's work email, e.g. `aarav.mehta@oxp.com` | `SEED_EMPLOYEE_PASSWORD` | EMPLOYEE |
+`prisma db seed` creates or updates one canonical account per Prisma role. Each account has an explicit
+environment-backed username/password pair; the linked employee's work email remains a valid login alias.
+
+| Role | Username env | Password env | Default username |
+|---|---|---|---|
+| EMPLOYEE | `SEED_EMPLOYEE_USERNAME` | `SEED_EMPLOYEE_PASSWORD` | `employee` |
+| HR_MANAGER | `SEED_HR_MANAGER_USERNAME` | `SEED_HR_MANAGER_PASSWORD` | `hr.manager` |
+| HR_PAYROLL_USER | `SEED_HR_PAYROLL_USER_USERNAME` | `SEED_HR_PAYROLL_USER_PASSWORD` | `hr.payroll.user` |
+| HR_PAYROLL_MANAGER | `SEED_HR_PAYROLL_MANAGER_USERNAME` | `SEED_HR_PAYROLL_MANAGER_PASSWORD` | `hr.payroll.manager` |
+| ADMIN | `SEED_ADMIN_USERNAME` | `SEED_ADMIN_PASSWORD` | `admin` |
 
 ## Configuration (`.env`)
 
@@ -45,8 +48,7 @@ Schema changes: edit `prisma/schema.prisma`, then `npm run prisma:migrate -- --n
 | `DEFAULT_CURRENCY` | Currency stamped on contracts when none is given |
 | `APP_TIMEZONE` | IANA zone used to decide which day a punch belongs to and whether it is late |
 | `LATE_GRACE_MINUTES` | Grace after scheduled start before a clock-in counts as late |
-| `SEED_HR_PASSWORD`, `SEED_EMPLOYEE_PASSWORD`, `SEED_PAYROLL_PASSWORD`, `SEED_PAYROLL_MANAGER_PASSWORD` | Passwords for the seeded role-specific demo accounts |
-| `SEED_ADMIN_USERNAME`, `SEED_ADMIN_PASSWORD` | Credentials for the idempotently seeded ADMIN account |
+| `SEED_<ROLE>_USERNAME`, `SEED_<ROLE>_PASSWORD` | Canonical credentials for each seeded role account; see the table above |
 
 ## Authentication
 

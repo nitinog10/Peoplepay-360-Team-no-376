@@ -18,6 +18,13 @@ const optionalBooleanString = z.preprocess(
     .transform((v) => v === 'true')
     .optional(),
 );
+const seedUsername = z
+  .string()
+  .trim()
+  .min(3)
+  .max(50)
+  .regex(/^[a-zA-Z0-9._@-]+$/, 'Seed usernames may contain only letters, numbers, dots, underscores, @, and hyphens');
+const seedPassword = z.string().min(8).max(200);
 
 const envSchema = z
   .object({
@@ -44,13 +51,16 @@ const envSchema = z
     SMTP_PASS: optionalString,
     MAIL_FROM: optionalString,
 
-    SEED_HR_USERNAME: z.string().default('hr.manager'),
-    SEED_HR_PASSWORD: z.string().min(8).default('ChangeMe123!'),
-    SEED_EMPLOYEE_PASSWORD: z.string().min(8).default('Employee123!'),
-    SEED_PAYROLL_PASSWORD: z.string().min(8).default('Payroll123!'),
-    SEED_PAYROLL_MANAGER_PASSWORD: z.string().min(8).default('PayrollManager123!'),
-    SEED_ADMIN_USERNAME: z.string().trim().min(3).max(50).default('admin'),
-    SEED_ADMIN_PASSWORD: z.string().min(8).default('Admin123!'),
+    SEED_EMPLOYEE_USERNAME: seedUsername.default('employee'),
+    SEED_EMPLOYEE_PASSWORD: seedPassword.default('Employee123!'),
+    SEED_HR_MANAGER_USERNAME: seedUsername.default('hr.manager'),
+    SEED_HR_MANAGER_PASSWORD: seedPassword.default('HrManager123!'),
+    SEED_HR_PAYROLL_USER_USERNAME: seedUsername.default('hr.payroll.user'),
+    SEED_HR_PAYROLL_USER_PASSWORD: seedPassword.default('HrPayrollUser123!'),
+    SEED_HR_PAYROLL_MANAGER_USERNAME: seedUsername.default('hr.payroll.manager'),
+    SEED_HR_PAYROLL_MANAGER_PASSWORD: seedPassword.default('HrPayrollManager123!'),
+    SEED_ADMIN_USERNAME: seedUsername.default('admin'),
+    SEED_ADMIN_PASSWORD: seedPassword.default('Admin123!'),
   })
   .superRefine((value, ctx) => {
     if ((value.SMTP_USER === undefined) !== (value.SMTP_PASS === undefined)) {
@@ -62,6 +72,22 @@ const envSchema = z
     }
     if (value.SMTP_HOST && !value.MAIL_FROM) {
       ctx.addIssue({ code: 'custom', path: ['MAIL_FROM'], message: 'MAIL_FROM is required when SMTP_HOST is configured' });
+    }
+
+    const seedUsernames = [
+      ['SEED_EMPLOYEE_USERNAME', value.SEED_EMPLOYEE_USERNAME],
+      ['SEED_HR_MANAGER_USERNAME', value.SEED_HR_MANAGER_USERNAME],
+      ['SEED_HR_PAYROLL_USER_USERNAME', value.SEED_HR_PAYROLL_USER_USERNAME],
+      ['SEED_HR_PAYROLL_MANAGER_USERNAME', value.SEED_HR_PAYROLL_MANAGER_USERNAME],
+      ['SEED_ADMIN_USERNAME', value.SEED_ADMIN_USERNAME],
+    ] as const;
+    const seen = new Set<string>();
+    for (const [key, username] of seedUsernames) {
+      const normalized = username.toLocaleLowerCase('en-US');
+      if (seen.has(normalized)) {
+        ctx.addIssue({ code: 'custom', path: [key], message: 'Seed usernames must be unique (case-insensitive)' });
+      }
+      seen.add(normalized);
     }
   });
 

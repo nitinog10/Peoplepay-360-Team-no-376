@@ -1,19 +1,23 @@
+import 'dotenv/config';
+
 /**
  * End-to-end smoke test against a running API with seeded data.
  *   API_URL=http://localhost:8000/api/v1 npx tsx scripts/smoke.ts
  *
- * Logs in as the seeded HR manager and an employee, then walks every module:
+ * Logs in through every canonical role account, then walks every module:
  * reads, writes, business-rule rejections and role scoping. Exits non-zero on failure.
  */
 const API = process.env.API_URL ?? 'http://localhost:8000/api/v1';
-const HR_USER = process.env.SEED_HR_USERNAME ?? 'hr.manager';
-const HR_PASS = process.env.SEED_HR_PASSWORD ?? 'ChangeMe123!';
-const EMP_USER = 'aarav.mehta@oxp.com';
+const EMP_USER = process.env.SEED_EMPLOYEE_USERNAME ?? 'employee';
 const EMP_PASS = process.env.SEED_EMPLOYEE_PASSWORD ?? 'Employee123!';
-const PAYROLL_USER = 'vikram.singh@oxp.com';
-const PAYROLL_PASS = process.env.SEED_PAYROLL_PASSWORD ?? 'Payroll123!';
-const PAYROLL_MANAGER_USER = 'maya.shah@oxp.com';
-const PAYROLL_MANAGER_PASS = process.env.SEED_PAYROLL_MANAGER_PASSWORD ?? 'PayrollManager123!';
+const HR_USER = process.env.SEED_HR_MANAGER_USERNAME ?? 'hr.manager';
+const HR_PASS = process.env.SEED_HR_MANAGER_PASSWORD ?? 'HrManager123!';
+const PAYROLL_USER = process.env.SEED_HR_PAYROLL_USER_USERNAME ?? 'hr.payroll.user';
+const PAYROLL_PASS = process.env.SEED_HR_PAYROLL_USER_PASSWORD ?? 'HrPayrollUser123!';
+const PAYROLL_MANAGER_USER = process.env.SEED_HR_PAYROLL_MANAGER_USERNAME ?? 'hr.payroll.manager';
+const PAYROLL_MANAGER_PASS = process.env.SEED_HR_PAYROLL_MANAGER_PASSWORD ?? 'HrPayrollManager123!';
+const ADMIN_USER = process.env.SEED_ADMIN_USERNAME ?? 'admin';
+const ADMIN_PASS = process.env.SEED_ADMIN_PASSWORD ?? 'Admin123!';
 
 let failures = 0;
 const results: string[] = [];
@@ -61,7 +65,7 @@ async function main() {
   const hr: string = hrLogin.json?.accessToken;
 
   const empLogin = await call('POST', '/auth/login', undefined, { username: EMP_USER, password: EMP_PASS });
-  ok('employee login (by email)', empLogin.status === 200 && empLogin.json?.user?.role === 'EMPLOYEE');
+  ok('employee login', empLogin.status === 200 && empLogin.json?.user?.role === 'EMPLOYEE');
   const emp: string = empLogin.json?.accessToken;
   const empId: number = empLogin.json?.user?.employee?.employeeId;
 
@@ -577,8 +581,8 @@ async function main() {
     Array.isArray(actual) && actual.length === expected.length && actual.every((value, index) => value === expected[index]);
 
   const adminLogin = await call('POST', '/auth/login', undefined, {
-    username: process.env.SEED_ADMIN_USERNAME ?? 'admin',
-    password: process.env.SEED_ADMIN_PASSWORD ?? 'Admin123!',
+    username: ADMIN_USER,
+    password: ADMIN_PASS,
   });
   const admin: string = adminLogin.json?.accessToken;
   const adminUserId: number = adminLogin.json?.user?.userId;
@@ -647,19 +651,19 @@ async function main() {
   ok('ADMIN can read another employee directly', adminOtherEmployee.status === 200 && adminOtherEmployee.json?.employeeId === otherId);
 
   const adminListPaths = [
-    '/users?pageSize=1',
-    '/departments?pageSize=1',
-    '/leave-types?pageSize=1',
-    '/work-schedules?pageSize=1',
-    '/employees?pageSize=1',
-    '/contracts?pageSize=1',
-    `/attendance/records?from=${plusDays(-7)}&to=${today}&pageSize=1`,
-    '/leave-balances?pageSize=1',
-    '/time-off/requests?pageSize=1',
-    '/salary-structures?pageSize=1',
-    '/salary-rules?pageSize=1',
-    '/payruns?pageSize=1',
-    '/payslips?pageSize=1',
+    '/users?pageSize=10',
+    '/departments?pageSize=10',
+    '/leave-types?pageSize=10',
+    '/work-schedules?pageSize=10',
+    '/employees?pageSize=10',
+    '/contracts?pageSize=10',
+    `/attendance/records?from=${plusDays(-7)}&to=${today}&pageSize=10`,
+    '/leave-balances?pageSize=10',
+    '/time-off/requests?pageSize=10',
+    '/salary-structures?pageSize=10',
+    '/salary-rules?pageSize=10',
+    '/payruns?pageSize=10',
+    '/payslips?pageSize=10',
   ];
   const adminListResults: Array<{ path: string; response: Awaited<ReturnType<typeof call>> }> = [];
   for (const path of adminListPaths) {

@@ -210,7 +210,7 @@ The existing `HR_MANAGER` set must be copied/frozen before adding payroll permis
 
 Although all five role rows are seeded idempotently, only `EMPLOYEE`, `HR_MANAGER`, and `HR_PAYROLL_USER` are assignable/returned for account management in Phase 3. `HR_PAYROLL_MANAGER` and `ADMIN` have empty permission sets and cannot be assigned until their phases release them.
 
-Representative login: existing Finance Controller **Vikram Singh**, username `vikram.singh@oxp.com`, receives `HR_PAYROLL_USER`. Its password follows the existing seed credential contract.
+Representative login: existing Finance Controller **Vikram Singh**, canonical username `hr.payroll.user`, receives `HR_PAYROLL_USER`. Its username/password come from `SEED_HR_PAYROLL_USER_USERNAME` / `SEED_HR_PAYROLL_USER_PASSWORD`; Vikram's work email remains a login alias.
 
 ---
 
@@ -457,7 +457,7 @@ The existing Payroll group gains Payruns, Payslips, Salary Structures, and Salar
 
 Fresh seed data adds, idempotently and behind the existing dataset guard:
 
-- All three remaining role rows but only one released payroll login (`vikram.singh@oxp.com`).
+- All three remaining role rows and a canonical `HR_PAYROLL_USER` login (`hr.payroll.user`, configured through its per-role env pair).
 - `Regular Salary` and the eight rules in §6.3.
 - Bank details for most, not all, active employees so the soft warning is demonstrable.
 - One representative computed payrun for the previous calendar month with deterministic payslip lines and totals.

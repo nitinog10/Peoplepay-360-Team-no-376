@@ -12,7 +12,13 @@ export function parseId(params: unknown): number {
 /** Shared pagination / sorting query. Modules extend it with their own filters. */
 export const paginationSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+  pageSize: z.coerce
+    .number()
+    .int()
+    .refine((value) => [10, 20, 50, 100].includes(value), {
+      message: 'pageSize must be one of 10, 20, 50, or 100',
+    })
+    .default(10),
   sort: z.string().trim().min(1).optional(),
   order: z.enum(['asc', 'desc']).default('asc'),
   q: z.string().trim().min(1).optional(),

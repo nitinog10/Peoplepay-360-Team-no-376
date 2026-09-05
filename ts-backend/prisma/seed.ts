@@ -16,6 +16,39 @@ import { weeklyHours } from '../src/modules/work-schedules/resolve';
 
 const log = (msg: string) => console.log(`[seed] ${msg}`);
 
+const SEEDED_ACCOUNTS = [
+  {
+    roleName: 'EMPLOYEE',
+    employeeEmail: 'aarav.mehta@oxp.com',
+    username: env.SEED_EMPLOYEE_USERNAME,
+    password: env.SEED_EMPLOYEE_PASSWORD,
+  },
+  {
+    roleName: 'HR_MANAGER',
+    employeeEmail: 'sara.khan@oxp.com',
+    username: env.SEED_HR_MANAGER_USERNAME,
+    password: env.SEED_HR_MANAGER_PASSWORD,
+  },
+  {
+    roleName: 'HR_PAYROLL_USER',
+    employeeEmail: 'vikram.singh@oxp.com',
+    username: env.SEED_HR_PAYROLL_USER_USERNAME,
+    password: env.SEED_HR_PAYROLL_USER_PASSWORD,
+  },
+  {
+    roleName: 'HR_PAYROLL_MANAGER',
+    employeeEmail: 'maya.shah@oxp.com',
+    username: env.SEED_HR_PAYROLL_MANAGER_USERNAME,
+    password: env.SEED_HR_PAYROLL_MANAGER_PASSWORD,
+  },
+  {
+    roleName: 'ADMIN',
+    employeeEmail: 'system.admin@peoplepay.local',
+    username: env.SEED_ADMIN_USERNAME,
+    password: env.SEED_ADMIN_PASSWORD,
+  },
+] as const;
+
 async function seedLookups() {
   for (const roleName of ['EMPLOYEE', 'HR_MANAGER', 'HR_PAYROLL_USER', 'HR_PAYROLL_MANAGER', 'ADMIN'] as const) {
     await prisma.role.upsert({ where: { roleName }, update: {}, create: { roleName } });
@@ -140,7 +173,6 @@ async function seedTransactional() {
   const dept = Object.fromEntries((await prisma.department.findMany()).map((d) => [d.departmentName, d.departmentId]));
   const types = Object.fromEntries((await prisma.leaveType.findMany()).map((t) => [t.typeName, t]));
   const sched = Object.fromEntries((await prisma.workSchedule.findMany()).map((s) => [s.scheduleName, s.scheduleId]));
-  const roles = Object.fromEntries((await prisma.role.findMany()).map((r) => [r.roleName, r.roleId]));
 
   const hire = (monthsAgo: number) => new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - monthsAgo, 1));
 
@@ -175,23 +207,8 @@ async function seedTransactional() {
   const all = [sara, maya, vikram, aarav, john, neha, priya, rohan];
   log(`created ${all.length + 1} employees`);
 
-  // ---- users ----
-  const hrHash = await hashPassword(env.SEED_HR_PASSWORD);
-  const empHash = await hashPassword(env.SEED_EMPLOYEE_PASSWORD);
-  const payrollHash = await hashPassword(env.SEED_PAYROLL_PASSWORD);
-  await prisma.user.create({ data: { employeeId: sara.employeeId, username: env.SEED_HR_USERNAME, passwordHash: hrHash, roleId: roles.HR_MANAGER } });
-  for (const e of all.filter((e) => e.employeeId !== sara.employeeId)) {
-    const isPayrollUser = e.employeeId === vikram.employeeId;
-    await prisma.user.create({
-      data: {
-        employeeId: e.employeeId,
-        username: e.email,
-        passwordHash: isPayrollUser ? payrollHash : empHash,
-        roleId: isPayrollUser ? roles.HR_PAYROLL_USER : roles.EMPLOYEE,
-      },
-    });
-  }
-  log(`users: ${env.SEED_HR_USERNAME} (HR_MANAGER), ${vikram.email} (HR_PAYROLL_USER), and ${all.length - 2} employees`);
+  // Canonical role accounts are synchronized after the representative dataset so
+  // credential changes also apply when the seed is re-run against an existing DB.
 
   // ---- contracts ----
   for (const e of all) {
@@ -312,69 +329,9 @@ async function seedTransactional() {
   log('time off requests created (2 approved, 2 pending, 1 rejected)');
 }
 
-async function ensurePayrollLogin() {
-  const employee = await prisma.employee.findUnique({
-    where: { email: 'vikram.singh@oxp.com' },
-    include: { user: true },
-  });
-  if (!employee) {
-    log('payroll demo login skipped: vikram.singh@oxp.com is not present');
-    return;
-  }
-
-  const role = await prisma.role.findUniqueOrThrow({ where: { roleName: 'HR_PAYROLL_USER' } });
-  const passwordHash = await hashPassword(env.SEED_PAYROLL_PASSWORD);
-  if (employee.user) {
-    await prisma.user.update({
-      where: { userId: employee.user.userId },
-      data: { username: employee.email, passwordHash, roleId: role.roleId, isActive: true },
-    });
-  } else {
-    await prisma.user.create({
-      data: {
-        employeeId: employee.employeeId,
-        username: employee.email,
-        passwordHash,
-        roleId: role.roleId,
-      },
-    });
-  }
-  log(`payroll login ready: ${employee.email} (HR_PAYROLL_USER)`);
-}
-
-async function ensurePayrollManagerLogin() {
-  const employee = await prisma.employee.findUnique({
-    where: { email: 'maya.shah@oxp.com' },
-    include: { user: true },
-  });
-  if (!employee) {
-    log('payroll manager demo login skipped: maya.shah@oxp.com is not present');
-    return;
-  }
-
-  const role = await prisma.role.findUniqueOrThrow({ where: { roleName: 'HR_PAYROLL_MANAGER' } });
-  const passwordHash = await hashPassword(env.SEED_PAYROLL_MANAGER_PASSWORD);
-  if (employee.user) {
-    await prisma.user.update({
-      where: { userId: employee.user.userId },
-      data: { username: employee.email, passwordHash, roleId: role.roleId, isActive: true },
-    });
-  } else {
-    await prisma.user.create({
-      data: {
-        employeeId: employee.employeeId,
-        username: employee.email,
-        passwordHash,
-        roleId: role.roleId,
-      },
-    });
-  }
-  log(`payroll manager login ready: ${employee.email} (HR_PAYROLL_MANAGER)`);
-}
-
-async function ensureAdminLogin() {
+async function ensureAdminEmployee() {
   const department = await prisma.department.findUnique({ where: { departmentName: 'Human Resources' } });
-  const employee = await prisma.employee.upsert({
+  await prisma.employee.upsert({
     where: { email: 'system.admin@peoplepay.local' },
     update: {
       firstName: 'System',
@@ -392,27 +349,122 @@ async function ensureAdminLogin() {
       jobTitle: 'System Administrator',
       departmentId: department?.departmentId,
     },
-    include: { user: true },
+  });
+}
+
+const normalizeLoginIdentifier = (value: string) => value.toLocaleLowerCase('en-US');
+
+async function ensureSeededAccounts() {
+  const representativeEmails = SEEDED_ACCOUNTS.filter((account) => account.roleName !== 'ADMIN').map(
+    (account) => account.employeeEmail,
+  );
+  const existingRepresentatives = await prisma.employee.findMany({
+    where: { email: { in: representativeEmails } },
+    select: { email: true },
+  });
+  const existingEmails = new Set(existingRepresentatives.map((employee) => normalizeLoginIdentifier(employee.email)));
+  const missingEmails = representativeEmails.filter((email) => !existingEmails.has(normalizeLoginIdentifier(email)));
+  if (missingEmails.length > 0) {
+    throw new Error(
+      `Cannot create canonical seed accounts because representative employees are missing: ${missingEmails.join(', ')}`,
+    );
+  }
+
+  await ensureAdminEmployee();
+
+  const [allEmployees, roles, users] = await Promise.all([
+    prisma.employee.findMany({ select: { employeeId: true, email: true } }),
+    prisma.role.findMany({ where: { roleName: { in: SEEDED_ACCOUNTS.map((account) => account.roleName) } } }),
+    prisma.user.findMany({ select: { userId: true, employeeId: true, username: true } }),
+  ]);
+  const employeesByEmail = new Map(allEmployees.map((employee) => [normalizeLoginIdentifier(employee.email), employee]));
+  const rolesByName = new Map(roles.map((role) => [role.roleName, role]));
+  const usersByEmployeeId = new Map(users.map((user) => [user.employeeId, user]));
+
+  const resolvedAccounts = SEEDED_ACCOUNTS.map((account) => {
+    const employee = employeesByEmail.get(normalizeLoginIdentifier(account.employeeEmail));
+    const role = rolesByName.get(account.roleName);
+    if (!employee || !role) throw new Error(`Cannot resolve employee or role for canonical ${account.roleName} account`);
+    return { ...account, employee, role, user: usersByEmployeeId.get(employee.employeeId) };
+  });
+  const canonicalByEmployeeId = new Map(resolvedAccounts.map((account) => [account.employee.employeeId, account]));
+  const finalUsernames = new Map(
+    users.map((user) => [
+      user.employeeId,
+      canonicalByEmployeeId.get(user.employeeId)?.username ?? user.username,
+    ]),
+  );
+  for (const account of resolvedAccounts) finalUsernames.set(account.employee.employeeId, account.username);
+
+  for (const account of resolvedAccounts) {
+    const usernameKey = normalizeLoginIdentifier(account.username);
+    const emailOwner = allEmployees.find(
+      (employee) =>
+        employee.employeeId !== account.employee.employeeId && normalizeLoginIdentifier(employee.email) === usernameKey,
+    );
+    if (emailOwner) {
+      throw new Error(
+        `${account.roleName} seed username "${account.username}" conflicts with the work email for ${emailOwner.email}`,
+      );
+    }
+
+    const finalUsernameOwner = [...finalUsernames].find(
+      ([employeeId, username]) =>
+        employeeId !== account.employee.employeeId && normalizeLoginIdentifier(username) === usernameKey,
+    );
+    if (finalUsernameOwner) {
+      throw new Error(`${account.roleName} seed username "${account.username}" is assigned to another user`);
+    }
+
+    const aliasOwner = [...finalUsernames].find(
+      ([employeeId, username]) =>
+        employeeId !== account.employee.employeeId &&
+        normalizeLoginIdentifier(username) === normalizeLoginIdentifier(account.employee.email),
+    );
+    if (aliasOwner) {
+      throw new Error(
+        `${account.roleName} work-email alias "${account.employee.email}" is assigned as another user's username`,
+      );
+    }
+  }
+
+  const passwordHashes = await Promise.all(resolvedAccounts.map((account) => hashPassword(account.password)));
+  const temporarySuffix = Date.now().toString(36);
+  await prisma.$transaction(async (tx) => {
+    for (const [index, account] of resolvedAccounts.entries()) {
+      if (!account.user) continue;
+      await tx.user.update({
+        where: { userId: account.user.userId },
+        data: { username: `seed.tmp.${account.user.userId}.${temporarySuffix}.${index}` },
+      });
+    }
+
+    for (const [index, account] of resolvedAccounts.entries()) {
+      if (account.user) {
+        await tx.user.update({
+          where: { userId: account.user.userId },
+          data: {
+            username: account.username,
+            passwordHash: passwordHashes[index],
+            roleId: account.role.roleId,
+            isActive: true,
+          },
+        });
+        await tx.refreshToken.deleteMany({ where: { userId: account.user.userId } });
+      } else {
+        await tx.user.create({
+          data: {
+            employeeId: account.employee.employeeId,
+            username: account.username,
+            passwordHash: passwordHashes[index],
+            roleId: account.role.roleId,
+          },
+        });
+      }
+    }
   });
 
-  const role = await prisma.role.findUniqueOrThrow({ where: { roleName: 'ADMIN' } });
-  const passwordHash = await hashPassword(env.SEED_ADMIN_PASSWORD);
-  if (employee.user) {
-    await prisma.user.update({
-      where: { userId: employee.user.userId },
-      data: { username: env.SEED_ADMIN_USERNAME, passwordHash, roleId: role.roleId, isActive: true },
-    });
-  } else {
-    await prisma.user.create({
-      data: {
-        employeeId: employee.employeeId,
-        username: env.SEED_ADMIN_USERNAME,
-        passwordHash,
-        roleId: role.roleId,
-      },
-    });
-  }
-  log(`admin login ready: ${env.SEED_ADMIN_USERNAME} (ADMIN)`);
+  for (const account of resolvedAccounts) log(`${account.roleName} login ready: ${account.username}`);
 }
 
 async function seedPayrollPeople() {
@@ -460,38 +512,49 @@ async function seedPayrollHistory() {
     return;
   }
 
-  let run = await prisma.payrun.findFirst({ where: { name, periodStart, periodEnd }, select: { payrunId: true, status: true } });
-  if (!run) {
-    const employees = await prisma.employee.findMany({ where: { status: 'ACTIVE' }, orderBy: { employeeId: 'asc' }, take: 4 });
-    const shells = [];
-    for (const employee of employees) {
-      const contract = await getActiveContract(employee.employeeId, periodEnd);
-      if (!contract?.baseSalary || !contract.currency || contract.currency.toUpperCase() !== structure.currency.toUpperCase()) continue;
-      shells.push({
-        employeeId: employee.employeeId,
-        contractId: contract.contractId,
-        contractWage: contract.baseSalary,
-        currency: contract.currency,
-      });
+  const existingRun = await prisma.payrun.findFirst({
+    where: { name, periodStart, periodEnd },
+    select: { payrunId: true, status: true },
+  });
+  if (existingRun) {
+    if (existingRun.status === 'DRAFT') {
+      await computePayrun(existingRun.payrunId);
+      log(`representative payrun recovered and computed: ${name}`);
+    } else {
+      log(`representative payrun already present: ${name} (${existingRun.status})`);
     }
-    if (shells.length === 0) {
-      log('representative payrun skipped: no eligible employees');
-      return;
-    }
-    run = await prisma.payrun.create({
-      data: {
-        name,
-        salaryStructureId: structure.salaryStructureId,
-        periodStart,
-        periodEnd,
-        currency: structure.currency,
-        createdBy: creator.employeeId,
-        payslips: { create: shells },
-      },
-      select: { payrunId: true, status: true },
+    return;
+  }
+
+  const employees = await prisma.employee.findMany({ where: { status: 'ACTIVE' }, orderBy: { employeeId: 'asc' }, take: 4 });
+  const shells = [];
+  for (const employee of employees) {
+    const contract = await getActiveContract(employee.employeeId, periodEnd);
+    if (!contract?.baseSalary || !contract.currency || contract.currency.toUpperCase() !== structure.currency.toUpperCase()) continue;
+    shells.push({
+      employeeId: employee.employeeId,
+      contractId: contract.contractId,
+      contractWage: contract.baseSalary,
+      currency: contract.currency,
     });
   }
-  if (run.status === 'DRAFT' || run.status === 'COMPUTED') await computePayrun(run.payrunId);
+  if (shells.length === 0) {
+    log('representative payrun skipped: no eligible employees');
+    return;
+  }
+  const run = await prisma.payrun.create({
+    data: {
+      name,
+      salaryStructureId: structure.salaryStructureId,
+      periodStart,
+      periodEnd,
+      currency: structure.currency,
+      createdBy: creator.employeeId,
+      payslips: { create: shells },
+    },
+    select: { payrunId: true },
+  });
+  await computePayrun(run.payrunId);
   log(`representative computed payrun ready: ${name}`);
 }
 
@@ -499,9 +562,7 @@ async function main() {
   await seedLookups();
   await seedPayrollConfiguration();
   await seedTransactional();
-  await ensurePayrollLogin();
-  await ensurePayrollManagerLogin();
-  await ensureAdminLogin();
+  await ensureSeededAccounts();
   await seedPayrollPeople();
   await seedPayrollHistory();
   log('done');

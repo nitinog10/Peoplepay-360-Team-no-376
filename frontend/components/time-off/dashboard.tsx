@@ -42,8 +42,8 @@ function ErrorText({ error }: { error: unknown }) {
 export function TimeOffDashboard() {
   const today = todayDateOnly();
   const balances = useQuery(api.leaveBalances.me());
-  const upcoming = useQuery(api.timeOff.list({ status: "APPROVED", from: today, pageSize: 5, sort: "startDate", order: "asc" }));
-  const pending = useQuery(api.timeOff.list({ status: "PENDING", pageSize: 5, sort: "requestedAt", order: "desc" }));
+  const upcoming = useQuery(api.timeOff.list({ status: "APPROVED", from: today, pageSize: 10, sort: "startDate", order: "asc" }));
+  const pending = useQuery(api.timeOff.list({ status: "PENDING", pageSize: 10, sort: "requestedAt", order: "desc" }));
 
   return (
     <div className="mx-auto flex w-full max-w-content flex-col gap-6 px-4 py-8">
