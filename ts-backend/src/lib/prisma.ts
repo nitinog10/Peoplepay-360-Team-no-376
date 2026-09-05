@@ -1,7 +1,17 @@
 import { PrismaMariaDb } from '@prisma/adapter-mariadb';
 import { env } from '../config/env';
-import { PrismaClient } from '../generated/prisma/client';
+import { Prisma, PrismaClient } from '../generated/prisma/client';
 import { logger } from './logger';
+
+/**
+ * Serialise DECIMAL columns as JSON numbers instead of strings. Decimal's own
+ * toJSON runs before any JSON.stringify replacer, so it must be overridden here.
+ * All monetary/day columns in this schema have ≤ 2 decimals and ≤ 12 digits, which
+ * a JS double represents exactly enough for API consumers.
+ */
+(Prisma.Decimal.prototype as unknown as { toJSON: () => number }).toJSON = function toJSON(this: Prisma.Decimal) {
+  return this.toNumber();
+};
 
 /**
  * Prisma 7 requires a driver adapter. We parse DATABASE_URL ourselves so the

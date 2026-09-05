@@ -4,7 +4,6 @@ import express from 'express';
 import helmet from 'helmet';
 import { pinoHttp } from 'pino-http';
 import { env, isTest } from './config/env';
-import { jsonReplacer } from './lib/http';
 import { logger } from './lib/logger';
 import { errorHandler } from './middleware/error-handler';
 import { notFound } from './middleware/not-found';
@@ -14,7 +13,6 @@ export function createApp() {
   const app = express();
 
   app.disable('x-powered-by');
-  app.set('json replacer', jsonReplacer);
   app.set('trust proxy', 1);
 
   app.use(helmet());

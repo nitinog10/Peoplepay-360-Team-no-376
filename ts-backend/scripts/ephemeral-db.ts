@@ -11,10 +11,12 @@ import { createDB } from 'mysql-memory-server';
 import mariadb from 'mariadb';
 
 const serve = process.argv.includes('--serve');
+/** Fixed port (e.g. EPHEMERAL_PORT=3307) so tooling can predict DATABASE_URL; 0 = random free port. */
+const fixedPort = Number(process.env.EPHEMERAL_PORT ?? 0) || 0;
 
 async function main() {
   console.log('Starting ephemeral MySQL 8.4 (first run downloads the binary)...');
-  const db = await createDB({ version: '8.4.x', dbName: 'peoplepay360', logLevel: 'WARN' });
+  const db = await createDB({ version: '8.4.x', dbName: 'peoplepay360', logLevel: 'WARN', port: fixedPort });
   const url = `mysql://${db.username}@127.0.0.1:${db.port}/${db.dbName}`;
   console.log(`MySQL ${db.mysql.version} ready on port ${db.port}`);
   console.log(`DATABASE_URL=${url}`);

@@ -224,6 +224,10 @@ Legend: **E** = EMPLOYEE (own rows only), **H** = HR_MANAGER.
 
 ## 8. Implementation order
 
+**Status (2026-09-05):** milestones 0–5 are built and verified end to end against MySQL 8.4 (migration
+applied, seed loaded, 57/57 smoke checks passing via `ts-backend/scripts/smoke.ts`). Milestone 6 has the
+seed and smoke test; vitest unit tests and OpenAPI are still open. Milestone 7 (frontend) not started.
+
 | # | Milestone | Deliverable |
 |---|---|---|
 | 0 | Foundation | Prisma + MySQL wired (`.env`, optional `docker-compose.yml`), app skeleton, health route, module layout, first migration from section 4. |

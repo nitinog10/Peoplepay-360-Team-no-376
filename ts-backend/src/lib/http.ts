@@ -48,19 +48,3 @@ export function listResponse<T>(data: T[], total: number, p: Pick<Pagination, 'p
     },
   };
 }
-
-/**
- * JSON replacer used by Express so Prisma Decimal values serialise as numbers
- * instead of strings, and Dates stay ISO strings.
- */
-export function jsonReplacer(_key: string, value: unknown): unknown {
-  if (
-    value !== null &&
-    typeof value === 'object' &&
-    typeof (value as { toNumber?: unknown }).toNumber === 'function' &&
-    (value as { constructor?: { name?: string } }).constructor?.name === 'Decimal'
-  ) {
-    return (value as { toNumber: () => number }).toNumber();
-  }
-  return value;
-}
