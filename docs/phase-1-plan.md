@@ -1,5 +1,8 @@
 # PeoplePay360 — Phase 1 Implementation Plan
 
+> Covers roles ① EMPLOYEE and ② HR_MANAGER (Phases 1 and 2 in the team's role-numbered flow).
+> Cross-phase status, Phases 3–5 scope and the "schema arrives" playbook live in `docs/overall-implementation-plan.md`.
+
 **Scope of Phase 1**
 
 | Role | Capabilities |
