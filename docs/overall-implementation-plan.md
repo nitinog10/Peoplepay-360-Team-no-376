@@ -34,8 +34,8 @@ The sketch numbers the roles ① → ⑤ and shows the access hierarchy on the b
 
 | Phase | Role (enum value) | Team schema | Backend | Frontend | Plan doc |
 |---|---|---|---|---|---|
-| 1 | ① `EMPLOYEE` | ✅ received 2026-09-05 | ✅ | ❌ | `docs/phase-1-plan.md` |
-| 2 | ② `HR_MANAGER` | ✅ (same schema as Phase 1) | ✅ | ❌ | `docs/phase-1-plan.md` |
+| 1 | ① `EMPLOYEE` | ✅ received 2026-09-05 | ✅ | 🟡 platform ✅ (FE-1…FE-6), screens P1-1…P1-5 ❌ | `docs/phase-1-plan.md` |
+| 2 | ② `HR_MANAGER` | ✅ (same schema as Phase 1) | ✅ | 🟡 platform ✅ (FE-1…FE-6), screens P2-1…P2-10 ❌ | `docs/phase-1-plan.md` |
 | 3 | ③ `HR_PAYROLL_USER` | ⏳ to be given | ⏳ | ❌ | §4 below (scope only) |
 | 4 | ④ `HR_PAYROLL_MANAGER` | ⏳ to be given | ⏳ | ❌ | §5 below (scope only) |
 | 5 | ⑤ `ADMIN` | ⏳ to be given | ⏳ | ❌ | §6 below (scope only) |
