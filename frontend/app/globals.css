@@ -85,7 +85,7 @@
   --border: #e5e1e4;
   --input: #d8d2d7;
   --ring: #96697f;
-  --radius: 0.75rem;
+  --radius: 0.25rem;
 
   /* Visual reference palette. Pink stays reserved for destructive/rare callouts. */
   --brand-50: #fbf8fa;

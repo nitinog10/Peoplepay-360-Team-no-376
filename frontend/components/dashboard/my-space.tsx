@@ -15,8 +15,6 @@ import {
   WalletCardsIcon,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/page-header";
@@ -92,37 +90,21 @@ function PunchActions({ session }: { session: AttendanceSession }) {
 }
 
 export function MySpace() {
-  const router = useRouter();
-  const { user, can } = useSession();
-  const hrLanding = can("employees:write");
+  const { user } = useSession();
   const today = todayDateOnly();
   const from = format(subDays(new Date(), 6), "yyyy-MM-dd");
 
-  useEffect(() => {
-    if (hrLanding) router.replace("/employees");
-  }, [hrLanding, router]);
-
-  const employee = useQuery({ ...api.employees.me(), enabled: !hrLanding });
-  const summary = useQuery({ ...api.employees.summary("me"), enabled: !hrLanding });
-  const schedule = useQuery({ ...api.employees.mySchedule(), enabled: !hrLanding });
-  const balances = useQuery({ ...api.leaveBalances.me(), enabled: !hrLanding });
-  const session = useQuery({ ...api.attendance.session(), enabled: !hrLanding });
-  const attendance = useQuery({
-    ...api.attendance.list({ from, to: today, pageSize: 10, sort: "attendanceDate", order: "desc" }),
-    enabled: !hrLanding,
-  });
-  const requests = useQuery({
-    ...api.timeOff.list({ pageSize: 10, sort: "requestedAt", order: "desc" }),
-    enabled: !hrLanding,
-  });
-
-  if (hrLanding) {
-    return (
-      <div className="mx-auto w-full max-w-content px-4 py-8">
-        <Skeleton className="h-28 w-full" />
-      </div>
-    );
-  }
+  const employee = useQuery(api.employees.me());
+  const summary = useQuery(api.employees.summary("me"));
+  const schedule = useQuery(api.employees.mySchedule());
+  const balances = useQuery(api.leaveBalances.me());
+  const session = useQuery(api.attendance.session());
+  const attendance = useQuery(
+    api.attendance.list({ from, to: today, pageSize: 10, sort: "attendanceDate", order: "desc" }),
+  );
+  const requests = useQuery(
+    api.timeOff.list({ pageSize: 10, sort: "requestedAt", order: "desc" }),
+  );
 
   const profile = employee.data;
   const totalAvailable = balances.data?.data.reduce((sum, balance) => sum + balance.availableDays, 0) ?? 0;
