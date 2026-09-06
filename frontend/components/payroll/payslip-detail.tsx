@@ -102,8 +102,8 @@ export function PayslipDetail({ payslipId }: { payslipId: number }) {
           <Detail label="Department" value={slip.employee.department?.departmentName ?? "—"} />
           <Detail label="Contract" value={<Link className="text-primary hover:underline" href={`/contracts/${slip.contractId}`}>Contract #{slip.contractId}</Link>} />
           <Detail label="Contract wage" value={formatCurrency(slip.contractWage, slip.currency)} />
-          <Detail label="Salary structure" value={<Link className="text-primary hover:underline" href={`/payroll/structures/${slip.salaryStructure.salaryStructureId}`}>{slip.salaryStructure.name}</Link>} />
-          <Detail label="Payrun" value={<Link className="text-primary hover:underline" href={`/payroll/payruns/${slip.payrunId}`}>{slip.payrun.name}</Link>} />
+          <Detail label="Salary structure" value={can("salary-config:read") ? <Link className="text-primary hover:underline" href={`/payroll/structures/${slip.salaryStructure.salaryStructureId}`}>{slip.salaryStructure.name}</Link> : slip.salaryStructure.name} />
+          <Detail label="Payrun" value={can("payroll:read") ? <Link className="text-primary hover:underline" href={`/payroll/payruns/${slip.payrunId}`}>{slip.payrun.name}</Link> : slip.payrun.name} />
           <Detail label="Computed" value={slip.computedAt ? formatDateTime(slip.computedAt) : "Not computed"} />
         </dl></CardContent>
       </Card>

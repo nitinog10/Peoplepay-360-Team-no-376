@@ -56,7 +56,7 @@ environment-backed username/password pair; the linked employee's work email rema
 access token (send as `Authorization: Bearer …`) and a rotating refresh token (also set as an httpOnly
 cookie scoped to `/api/v1/auth`). `POST /auth/refresh`, `POST /auth/logout`, `GET /auth/me`.
 
-Permissions are defined in `src/auth/permissions.ts`. EMPLOYEE reads are scoped to the caller's own employee record; ADMIN receives all **27** code-defined permissions and unrestricted row scope. Non-admin holders of `users:manage` may create or mutate EMPLOYEE-role accounts only, while ADMIN can assign and manage every released role.
+Permissions are defined in `src/auth/permissions.ts`. EMPLOYEE reads are scoped to the caller's own employee record; ADMIN receives all **28** code-defined permissions and unrestricted row scope. Non-admin holders of `users:manage` may create or mutate EMPLOYEE-role accounts only, while ADMIN can assign and manage every released role.
 
 ## Endpoints (`/api/v1`)
 

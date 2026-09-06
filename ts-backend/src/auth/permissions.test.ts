@@ -23,7 +23,7 @@ const payrollManager: Actor = { userId: 4, employeeId: 4, role: 'HR_PAYROLL_MANA
 const admin: Actor = { userId: 5, employeeId: 5, role: 'ADMIN', username: 'admin' };
 const employee: Actor = { userId: 2, employeeId: 7, role: 'EMPLOYEE', username: 'employee' };
 
-const PAYROLL_USER_PERMISSIONS = ['payroll:read', 'payruns:write', 'payslips:write', 'salary-config:read'] as const;
+const PAYROLL_USER_PERMISSIONS = ['payroll:read', 'payruns:write', 'payslips:read', 'payslips:write', 'salary-config:read'] as const;
 const PAYROLL_MANAGER_PERMISSIONS = ['salary-config:write', 'payruns:delete', 'payslips:delete'] as const;
 const ADMIN_ONLY_PERMISSIONS = ['roles:read'] as const;
 
@@ -61,7 +61,7 @@ describe('role catalogue', () => {
   });
 
   it('gives EMPLOYEE reads plus self-service only', () => {
-    for (const p of ['attendance:punch', 'time-off:request', 'employees:read', 'leave-balances:read'] as const) {
+    for (const p of ['attendance:punch', 'time-off:request', 'employees:read', 'leave-balances:read', 'payslips:read'] as const) {
       expect(hasPermission('EMPLOYEE', p)).toBe(true);
     }
   });

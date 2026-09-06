@@ -29,6 +29,7 @@ export const PERMISSIONS = [
   'time-off:decide',
   'payroll:read',
   'payruns:write',
+  'payslips:read',
   'payslips:write',
   'salary-config:read',
   'salary-config:write',
@@ -73,12 +74,14 @@ const EMPLOYEE: Permission[] = [
   'leave-balances:read',
   'time-off:read',
   'time-off:request',
+  'payslips:read',
 ];
 
 const HR_PAYROLL_USER: Permission[] = [
   ...HR_MANAGER,
   'payroll:read',
   'payruns:write',
+  'payslips:read',
   'payslips:write',
   'salary-config:read',
 ];

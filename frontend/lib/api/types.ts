@@ -95,7 +95,7 @@ export const PERMISSIONS = [
   "attendance:read", "attendance:punch", "attendance:write",
   "leave-balances:read", "leave-balances:write",
   "time-off:read", "time-off:request", "time-off:decide",
-  "payroll:read", "payruns:write", "payslips:write", "salary-config:read",
+  "payroll:read", "payruns:write", "payslips:read", "payslips:write", "salary-config:read",
   "salary-config:write", "payruns:delete", "payslips:delete",
 ] as const;
 

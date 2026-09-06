@@ -8,11 +8,11 @@ import * as service from './service';
 export const payslipsRouter = Router();
 payslipsRouter.use(authenticate);
 
-payslipsRouter.get('/', authorize('payroll:read'), async (req, res) => {
+payslipsRouter.get('/', authorize('payslips:read'), async (req, res) => {
   res.json(await service.list(getActor(req), listPayslipsSchema.parse(req.query)));
 });
 
-payslipsRouter.get('/:id', authorize('payroll:read'), async (req, res) => {
+payslipsRouter.get('/:id', authorize('payslips:read'), async (req, res) => {
   res.json(await service.get(getActor(req), parseId(req.params)));
 });
 
@@ -25,7 +25,7 @@ payslipsRouter.post('/:id/recompute', authorize('payslips:write'), async (req, r
   res.json(await service.recompute(getActor(req), parseId(req.params)));
 });
 
-payslipsRouter.get('/:id/pdf', authorize('payroll:read'), async (req, res) => {
+payslipsRouter.get('/:id/pdf', authorize('payslips:read'), async (req, res) => {
   const result = await service.pdf(getActor(req), parseId(req.params));
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);

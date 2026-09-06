@@ -278,8 +278,13 @@ async function main() {
   // ---- Phase 3 payroll ----
   const hrPayrollDenied = await call('GET', '/payruns', hr);
   ok('HR_MANAGER cannot read payroll', hrPayrollDenied.status === 403);
-  const employeePayrollDenied = await call('GET', '/payslips', emp);
-  ok('EMPLOYEE cannot read payroll', employeePayrollDenied.status === 403);
+  const employeePayslips = await call('GET', '/payslips', emp);
+  ok(
+    'EMPLOYEE reads own payslips only',
+    employeePayslips.status === 200 &&
+      Array.isArray(employeePayslips.json?.data) &&
+      employeePayslips.json.data.every((payslip: any) => payslip.employeeId === empId),
+  );
   const assignableRolesForHr = await call('GET', '/roles', hr);
   const hrAssignableRoleNames = (assignableRolesForHr.json?.data ?? []).map((role: any) => role.roleName);
   ok(
@@ -587,12 +592,12 @@ async function main() {
   const admin: string = adminLogin.json?.accessToken;
   const adminUserId: number = adminLogin.json?.user?.userId;
   ok(
-    'ADMIN login exposes the exact 27-permission catalogue',
+    'ADMIN login exposes the exact 28-permission catalogue',
     adminLogin.status === 200 &&
       adminLogin.json?.user?.role === 'ADMIN' &&
       typeof adminLogin.json?.refreshToken === 'string' &&
       typeof admin === 'string' &&
-      PERMISSIONS.length === 27 &&
+      PERMISSIONS.length === 28 &&
       sameStringMembers(adminLogin.json?.user?.permissions, PERMISSIONS),
   );
 

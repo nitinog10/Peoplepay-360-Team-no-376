@@ -9,7 +9,7 @@ export default async function PayslipDetailPage(props: PageProps<"/payroll/paysl
   if (!Number.isInteger(payslipId) || payslipId <= 0) notFound();
 
   return (
-    <RequirePermission permission="payroll:read">
+    <RequirePermission permission="payslips:read">
       <PayslipDetail payslipId={payslipId} />
     </RequirePermission>
   );
