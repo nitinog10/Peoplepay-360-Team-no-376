@@ -135,7 +135,7 @@ export function ListError({
   return (
     <div
       className={cn(
-        "flex flex-col items-center gap-3 rounded-2xl border border-dashed bg-card px-6 py-12 text-center",
+        "flex flex-col items-center gap-3 rounded-none border border-dashed bg-card px-6 py-12 text-center",
         className,
       )}
     >
@@ -219,7 +219,7 @@ export function DataTable<T>({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm",
+        "overflow-hidden rounded-none border border-border/80 bg-card shadow-sm",
         className,
       )}
     >
