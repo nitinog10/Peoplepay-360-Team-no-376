@@ -19,8 +19,8 @@ if (!Number.isInteger(fixedPort) || fixedPort < 0 || fixedPort > 65535) {
 }
 
 async function main() {
-  console.log('Starting ephemeral MySQL 8.4 (first run downloads the binary)...');
-  const db = await createDB({ version: '8.4.x', dbName: 'peoplepay360', logLevel: 'WARN', port: fixedPort });
+  console.log('Starting ephemeral MySQL 8.0.37 (first run downloads the binary)...');
+  const db = await createDB({ version: '8.0.37', dbName: 'peoplepay360', logLevel: 'WARN', port: fixedPort });
   const url = `mysql://${db.username}@127.0.0.1:${db.port}/${db.dbName}`;
   console.log(`MySQL ${db.mysql.version} ready on port ${db.port}`);
   console.log(`DATABASE_URL=${url}`);

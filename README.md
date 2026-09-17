@@ -141,7 +141,7 @@ Set-Location ..
 Bash/zsh:
 
 ```bash
-cd ts-backend
+
 npm ci
 cd ../frontend
 npm ci
